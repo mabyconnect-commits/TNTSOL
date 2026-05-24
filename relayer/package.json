@@ -1,0 +1,25 @@
+{
+  "name": "tntsol-relayer",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Cross-cluster (devnet <-> mainnet) relayer for the TNTSOL platform",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "demo": "RELAYER_DEMO=true tsx src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.95.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  }
+}
