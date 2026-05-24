@@ -70,11 +70,8 @@ pub mod treasury {
         require!(amount > 0, TreasuryError::ZeroAmount);
         let c = &ctx.accounts.config;
 
-        let fee = (amount as u128) * (c.activation_fee_bps as u128) / BPS_DENOM;
-        let team = fee * (c.team_split_bps as u128) / BPS_DENOM;
-        let to_treasury = fee - team;
-        let team = u64::try_from(team).map_err(|_| TreasuryError::Overflow)?;
-        let to_treasury = u64::try_from(to_treasury).map_err(|_| TreasuryError::Overflow)?;
+        let (fee, team, to_treasury) =
+            fee_split(amount, c.activation_fee_bps, c.team_split_bps).ok_or(TreasuryError::Overflow)?;
 
         if team > 0 {
             system_program::transfer(
@@ -104,7 +101,7 @@ pub mod treasury {
         let r = &mut ctx.accounts.receipt;
         r.activation_id = _activation_id;
         r.payer = ctx.accounts.payer.key();
-        r.fee_lamports = u64::try_from(fee).map_err(|_| TreasuryError::Overflow)?;
+        r.fee_lamports = fee;
         r.bump = ctx.bumps.receipt;
 
         emit!(FeeCollected {
@@ -123,8 +120,7 @@ pub mod treasury {
         let c = &ctx.accounts.config;
         let now = Clock::get()?.slot;
 
-        let payout = u64::try_from((whitelisted_amount as u128) * (c.redemption_rate_bps as u128) / BPS_DENOM)
-            .map_err(|_| TreasuryError::Overflow)?;
+        let payout = payout_for(whitelisted_amount, c.redemption_rate_bps).ok_or(TreasuryError::Overflow)?;
 
         // D1 — per-payout cap (0 = unlimited).
         if c.max_payout_lamports > 0 {
@@ -161,7 +157,7 @@ pub mod treasury {
             .checked_sub(payout)
             .ok_or(TreasuryError::InsufficientVault)?;
         let remaining_supply = snap.total_whitelisted.saturating_sub(whitelisted_amount);
-        let required = (remaining_supply as u128) * (c.redemption_rate_bps as u128) / BPS_DENOM;
+        let required = required_reserves(remaining_supply, c.redemption_rate_bps);
         require!((vault_after as u128) >= required, TreasuryError::WouldBreakSolvency);
 
         // Pay out from the vault PDA.
@@ -245,7 +241,7 @@ pub mod treasury {
     pub fn withdraw_surplus(ctx: Context<WithdrawSurplus>, lamports: u64) -> Result<()> {
         let c = &ctx.accounts.config;
         let snap = &ctx.accounts.snapshot;
-        let required = (snap.total_whitelisted as u128) * (c.redemption_rate_bps as u128) / BPS_DENOM;
+        let required = required_reserves(snap.total_whitelisted, c.redemption_rate_bps);
         let vault_after = ctx
             .accounts
             .vault
@@ -268,6 +264,27 @@ pub mod treasury {
         )?;
         Ok(())
     }
+}
+
+// --- pure money math (shared by instructions; unit-tested below). Mirrors the
+// relayer's bigint math in relayer/src/solvency.ts: floor division, never
+// rounding in the user's favor. ---
+
+fn payout_for(whitelisted_amount: u64, rate_bps: u16) -> Option<u64> {
+    u64::try_from((whitelisted_amount as u128) * (rate_bps as u128) / BPS_DENOM).ok()
+}
+
+fn required_reserves(supply: u64, rate_bps: u16) -> u128 {
+    (supply as u128) * (rate_bps as u128) / BPS_DENOM
+}
+
+// Returns (fee, team_slice, treasury_slice). Team is taken first; the treasury
+// keeps the remainder.
+fn fee_split(amount: u64, fee_bps: u16, team_split_bps: u16) -> Option<(u64, u64, u64)> {
+    let fee = (amount as u128) * (fee_bps as u128) / BPS_DENOM;
+    let team = fee * (team_split_bps as u128) / BPS_DENOM;
+    let to_treasury = fee - team;
+    Some((u64::try_from(fee).ok()?, u64::try_from(team).ok()?, u64::try_from(to_treasury).ok()?))
 }
 
 fn validate_params(args: &ConfigArgs) -> Result<()> {
@@ -516,4 +533,79 @@ pub enum TreasuryError {
     SupplyIncreaseTooLarge,
     #[msg("not enough attesters signed")]
     NotEnoughAttesters,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const SOL: u64 = 1_000_000_000;
+
+    fn args(fee: u16, rate: u16, team: u16) -> ConfigArgs {
+        ConfigArgs {
+            authority: Pubkey::default(),
+            activation_fee_bps: fee,
+            redemption_rate_bps: rate,
+            team_split_bps: team,
+            team_wallet: Pubkey::default(),
+            max_payout_lamports: 0,
+            window_payout_cap_lamports: 0,
+            window_slots: 150,
+            attester_set: vec![Pubkey::new_unique(), Pubkey::new_unique()],
+            attester_threshold: 2,
+            max_snapshot_staleness_slots: 150,
+            max_supply_increase_per_snapshot: 1000,
+        }
+    }
+
+    #[test]
+    fn payout_matches_relayer_math() {
+        // 0.75% of 30 SOL = 225_000_000 lamports, same as relayer redemptionPayout.
+        assert_eq!(payout_for(30 * SOL, 75), Some(225_000_000));
+        assert_eq!(payout_for(0, 75), Some(0));
+    }
+
+    #[test]
+    fn fee_split_takes_team_then_treasury() {
+        // 1% of 100 SOL = 1 SOL; team 20% = 0.2 SOL; treasury keeps 0.8 SOL.
+        assert_eq!(fee_split(100 * SOL, 100, 2000), Some((SOL, 200_000_000, 800_000_000)));
+    }
+
+    #[test]
+    fn required_reserves_tracks_rate() {
+        assert_eq!(required_reserves(100 * SOL, 75), 750_000_000u128);
+        assert_eq!(required_reserves(0, 75), 0u128);
+    }
+
+    #[test]
+    fn validate_accepts_a_buffered_config() {
+        assert!(validate_params(&args(100, 75, 2000)).is_ok());
+    }
+
+    #[test]
+    fn validate_rejects_zero_buffer() {
+        // kept = 80 bps, rate = 80 bps => not strictly greater.
+        assert!(validate_params(&args(100, 80, 2000)).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_under_reserved() {
+        // team 50% => kept 50 bps < owed 75 bps.
+        assert!(validate_params(&args(100, 75, 5000)).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_threshold_above_set_size() {
+        let mut a = args(100, 75, 2000);
+        a.attester_threshold = 3; // set has 2
+        assert!(validate_params(&a).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_window_cap_below_payout_cap() {
+        let mut a = args(100, 75, 2000);
+        a.max_payout_lamports = 1000;
+        a.window_payout_cap_lamports = 500; // a single payout could never fit a window
+        assert!(validate_params(&a).is_err());
+    }
 }
