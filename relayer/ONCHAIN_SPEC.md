@@ -132,11 +132,13 @@ trustworthily.
 1. **Source of truth.** Devnet `SupplyState.total_whitelisted` (§3.2) is the
    real value, mutated only by `grant_whitelist` / `burn_for_redemption`.
 2. **Attesters.** A set of M independent signers (the same Squads members or a
-   distinct oracle set) each read *finalized* devnet `SupplyState` and co-sign a
+   distinct oracle set) each read *finalized* devnet `SupplyState` and agree on a
    snapshot `{seq, total_whitelisted, as_of_slot, as_of_unix}`.
-3. **Bridge.** Any party submits the co-signed snapshot via
-   `post_supply_snapshot`; the treasury program accepts it only with ≥
-   `attester_threshold` valid signatures.
+3. **Bridge.** The snapshot is submitted via `post_supply_snapshot` as a
+   transaction **co-signed by ≥ `attester_threshold` members of `attester_set`**
+   (passed as additional signer accounts). The program counts signers that are
+   in the set and rejects below threshold. (Co-signing the transaction is the
+   idiomatic Solana form; no detached ed25519 verification needed.)
 4. **On-chain guards that bound a bad/compromised attestation:**
    - **Staleness window** — `pay_redemption` rejects if the snapshot is older
      than `max_snapshot_staleness_slots`. A stalled attester therefore *halts
@@ -193,9 +195,36 @@ standing between a bug and the treasury.
   separate oracle set? Separate reduces correlated-compromise risk.
 - **Vault custody at scale.** Single vault PDA vs. hot/cold split with a capped
   hot vault the relayer can draw from and a multisig-gated cold reserve.
-- **Parameter sizing.** Concrete values for `window_payout_cap`,
-  `window_slots`, `max_snapshot_staleness_slots`, and
-  `max_supply_increase_per_snapshot`, derived from expected volume and the D3
-  buffer (the §5 tuning rule).
 - **Anchor vs. native.** Anchor for speed/IDL (the relayer can generate a typed
-  client) vs. native for smaller surface. Recommend Anchor.
+  client) vs. native for smaller surface. **Decided: Anchor** — scaffolded under
+  [`../onchain/`](../onchain).
+
+## 8. Recommended starting parameters
+
+Illustrative values to calibrate against real mainnet volume before launch.
+Slot time is assumed ≈ 400 ms.
+
+| Param | Program | Start value | Rationale |
+|---|---|---|---|
+| `activation_fee_bps` | treasury | 100 (1%) | matches relayer default |
+| `redemption_rate_bps` | treasury | 75 (0.75%) | D3 buffer = 80−75 = 5 bps kept |
+| `team_split_bps` | treasury | 2000 (20%) | treasury keeps 80 bps |
+| `max_payout_lamports` | treasury | 100 SOL | single redemptions above this are held for multisig |
+| `window_slots` | treasury | 150 (~60 s) | rate-limit accounting window |
+| `window_payout_cap_lamports` | treasury | 50 SOL | max drain per window (worst case ≈ 50 SOL/min) |
+| `max_snapshot_staleness_slots` | treasury | 150 (~60 s) | older ⇒ redemptions halt (safe) |
+| `max_supply_increase_per_snapshot` | treasury | 1000 SOL | bounds supply inflation per attestation |
+| `attester_threshold` / set size | treasury | 2-of-3 | tolerate 1 down / 1 leaked key |
+
+**Tuning rule (from §5).** Keep `window_payout_cap_lamports` per
+`max_snapshot_staleness_slots` below the reserve buffer the vault carries, so the
+worst-case drain inside one stale window cannot breach solvency. With the values
+above the cap is 50 SOL/min; size the live buffer accordingly.
+
+**Relayer mirror (defense-in-depth).** Set `MAX_PAYOUT_LAMPORTS` =
+`max_payout_lamports` (100 SOL = `100000000000`) and `MAX_TICK_PAYOUT_LAMPORTS`
+≈ `window_payout_cap_lamports` scaled to the poll interval (e.g. for a 3 s poll
+vs. a 60 s window, ~`2500000000` = 2.5 SOL/tick).
+
+- **Remaining sizing TODO.** Replace the above with values derived from measured
+  activation/redemption throughput once devnet load-tested.
