@@ -40,14 +40,19 @@ if ! "$SOLANA_HOME/bin/solana" --version 2>/dev/null | grep -q "${SOLANA_VER#v}"
 fi
 add_path "$SOLANA_HOME/bin"
 
-# --- Anchor CLI. Installed straight from source via cargo rather than avm: the
-# current avm auto-installs a pinned legacy Solana over the network on `use`,
-# which fails here (TLS interception => UnknownIssuer in avm's rust client). A
-# direct anchor-cli binary just uses the Solana already on PATH. ---
+# --- Anchor CLI: download the prebuilt binary from the GitHub release. Building
+# it here fails two ways (anchor-cli's hidapi dep needs system libudev; avm
+# auto-pulls a pinned legacy Solana over the network and trips the environment's
+# TLS interception). The prebuilt binary just uses the Solana already on PATH. ---
 add_path "$HOME/.cargo/bin"
-if ! anchor --version 2>/dev/null | grep -q "$ANCHOR_VER"; then
-  echo "[hook] installing anchor-cli $ANCHOR_VER (slow, one-time)..."
-  cargo install --git https://github.com/coral-xyz/anchor --tag "v$ANCHOR_VER" anchor-cli --locked --force
+ANCHOR_BIN_DIR="$HOME/.local/share/anchor/bin"
+if ! "$ANCHOR_BIN_DIR/anchor" --version 2>/dev/null | grep -q "$ANCHOR_VER"; then
+  echo "[hook] installing anchor-cli $ANCHOR_VER (prebuilt)..."
+  mkdir -p "$ANCHOR_BIN_DIR"
+  curl -sSfL -o "$ANCHOR_BIN_DIR/anchor" \
+    "https://github.com/coral-xyz/anchor/releases/download/v$ANCHOR_VER/anchor-$ANCHOR_VER-x86_64-unknown-linux-gnu"
+  chmod +x "$ANCHOR_BIN_DIR/anchor"
 fi
+add_path "$ANCHOR_BIN_DIR" # last add_path wins precedence over any cargo/avm shim
 
 echo "[hook] done. solana=$("$SOLANA_HOME/bin/solana" --version 2>/dev/null || echo missing) anchor=$(anchor --version 2>/dev/null || echo pending)"

@@ -33,9 +33,13 @@ curl -sSfL https://github.com/anza-xyz/agave/releases/download/v4.0.0/solana-rel
   | tar -xj -C "$SOLANA_HOME" --strip-components=1
 export PATH="$SOLANA_HOME/bin:$PATH"
 
-# Anchor CLI — install anchor-cli directly (avm auto-pulls a pinned legacy
-# Solana over the network, which fails behind a TLS-intercepting proxy).
-cargo install --git https://github.com/coral-xyz/anchor --tag v0.32.1 anchor-cli --locked
+# Anchor CLI — download the prebuilt binary. (Compiling anchor-cli needs system
+# libudev; avm auto-pulls a pinned legacy Solana over the network, which fails
+# behind a TLS-intercepting proxy.)
+ANCHOR_BIN="$HOME/.local/share/anchor/bin"; mkdir -p "$ANCHOR_BIN"
+curl -sSfL -o "$ANCHOR_BIN/anchor" \
+  https://github.com/coral-xyz/anchor/releases/download/v0.32.1/anchor-0.32.1-x86_64-unknown-linux-gnu
+chmod +x "$ANCHOR_BIN/anchor"; export PATH="$ANCHOR_BIN:$PATH"
 
 anchor build            # SBF build + IDLs
 anchor keys sync        # replace placeholder declare_id!/Anchor.toml IDs
