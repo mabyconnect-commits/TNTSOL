@@ -895,12 +895,19 @@ textarea.input { resize: vertical; min-height: 90px; font-family: var(--font-dis
   .filter-row { flex-wrap: wrap; }
   .hero-strip { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 82%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
   .hero-card { scroll-snap-align: start; }
-  .feed-head, .feed-row { grid-template-columns: 1.7fr 0.9fr 64px; padding: 12px 14px; }
+  .feed-head, .feed-row { grid-template-columns: minmax(0, 1fr) auto 58px; gap: 10px; padding: 12px 14px; align-items: center; }
   .feed-head > :nth-child(1), .feed-row > :nth-child(1),
   .feed-head > :nth-child(4), .feed-row > :nth-child(4),
   .feed-head > :nth-child(5), .feed-row > :nth-child(5),
   .feed-head > :nth-child(6), .feed-row > :nth-child(6),
   .feed-head > :nth-child(7), .feed-row > :nth-child(7) { display: none; }
+  /* let the token column shrink (enables ellipsis) so price + Buy never overflow */
+  .feed-row .tk-cell, .feed-row .tk-info { min-width: 0; }
+  .feed-row .tk-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .feed-row > .num { font-size: 13px; white-space: nowrap; text-align: right; }
+  .feed-head > :nth-child(3) { text-align: right; }
+  /* pin every Buy button to the same fixed, centered track */
+  .feed-row > .btn { width: 58px; min-width: 58px; padding-left: 0; padding-right: 0; justify-content: center; }
 
   /* ---- Token / trade ---- */
   .tlayout { display: block; height: auto; }
