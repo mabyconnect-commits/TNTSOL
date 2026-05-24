@@ -134,6 +134,9 @@ user", never "user got value the platform didn't account for".
 
 ### Adopted (relayer side implemented; on-chain enforcement to follow)
 
+The on-chain program surface that makes D1/D2 authoritative is specified in
+[`ONCHAIN_SPEC.md`](./ONCHAIN_SPEC.md).
+
 - **D1 — Multisig key custody + on-chain rate limits (addresses T6).** The
   mainnet treasury authority is an N-of-M multisig (e.g. Squads), and the
   treasury program enforces withdrawal limits the relayer *cannot* exceed even
@@ -154,10 +157,10 @@ user", never "user got value the platform didn't account for".
 ### Still open (need decisions before the Anchor programs lock in)
 
 R1. **Whitelisted-supply attestation.** D2's on-chain check depends on a trustworthy
-   `total_whitelisted` number. Decide the source of truth: relayer counter
-   (current, weak), an on-chain devnet aggregate, or a periodically attested
-   snapshot. This is the input both the on-chain solvency check (D2) and any
-   audit relies on, and is the weakest link in D2 until resolved.
+   `total_whitelisted` number bridged from devnet to mainnet. **Designed** in
+   [`ONCHAIN_SPEC.md`](./ONCHAIN_SPEC.md) §5: multisig-attested snapshots with
+   on-chain staleness, monotonic-`seq`, bounded-increase, and threshold guards
+   (stale ⇒ redemptions halt, the safe failure). Still needs parameter sizing.
 R2. **Ledger reconciliation.** On boot, reconcile the local ledger against
    on-chain reality (treasury balance, processed-PDA set) so a tampered or stale
    ledger cannot silently violate invariants.
