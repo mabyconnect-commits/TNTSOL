@@ -22,7 +22,7 @@ export interface TxResult {
 }
 
 export type ActivationStatus = "RECEIVED" | "FEE_COLLECTED" | "WHITELISTED" | "FAILED";
-export type RedemptionStatus = "OBSERVED" | "HALTED_INSOLVENT" | "PAID" | "FAILED";
+export type RedemptionStatus = "OBSERVED" | "HELD_OVER_CAP" | "HALTED_INSOLVENT" | "PAID" | "FAILED";
 
 export interface ActivationRecord {
   id: string;

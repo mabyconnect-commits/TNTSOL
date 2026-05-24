@@ -41,14 +41,14 @@ not a convenience; it is the load-bearing trust component of the platform.
 
 | Module | Responsibility |
 |---|---|
-| `src/watcher.ts` | Polls both clusters, drives requests sequentially, recovers unfinished work on startup. |
+| `src/watcher.ts` | Polls both clusters, drives requests sequentially, reconciles unfinished work each tick, enforces the per-tick payout budget. |
 | `src/processors/activation.ts` | Fail-safe ordering: mainnet fee **before** devnet whitelist. |
-| `src/processors/redemption.ts` | Mirror observed burn → solvency gate → mainnet payout. |
+| `src/processors/redemption.ts` | Mirror observed burn → per-payout cap → tick budget → solvency gate → mainnet payout. |
 | `src/solvency.ts` | Pure fee/reserve math and the redemption solvency predicate. |
 | `src/ledger/store.ts` | Crash-tolerant file-backed state (atomic temp-then-rename) + idempotency records + cursors. |
 | `src/chain/adapter.ts` | The only surface that touches a cluster. Every mutating call takes an idempotency key. |
 | `src/chain/solanaAdapter.ts` | Real adapter (stubbed); TODO markers show where program CPIs go. |
-| `src/config.ts` | Loads + **validates** fee/split params; rejects under-reserved configs at startup. |
+| `src/config.ts` | Loads + **validates** fee/split params and payout caps; rejects under-reserved (non-positive-buffer) configs at startup. |
 
 ## 3. Trust model
 
@@ -69,7 +69,8 @@ relayer's correctness properties reduce the *accidental*-loss surface; they do
 ## 4. System invariants
 
 These must hold at all times. The relayer enforces I1–I3; I4 is a config-time
-guard; I5 is the property we want pushed on-chain.
+guard; I5 is enforced authoritatively on-chain with the relayer as
+defense-in-depth.
 
 - **I1 — No whitelist without fee.** Devnet whitelist is granted only after the
   mainnet fee for that activation is confirmed. (Ordering in `activation.ts`.)
@@ -78,12 +79,14 @@ guard; I5 is the property we want pushed on-chain.
   irreversible; the relayer reacts to it. (`redemption.ts`.)
 - **I3 — Exactly-once effects.** Every external mutation is idempotent on a
   stable key, so crash-retries never double-charge or double-pay.
-- **I4 — Reserve adequacy by construction.** `treasury_kept_per_unit >=
-  redemption_rate`, i.e. the team split cannot consume reserves the platform
-  will owe. Enforced in `config.ts`.
+- **I4 — Reserve adequacy with a positive buffer.** `treasury_kept_per_unit >
+  redemption_rate` *strictly* — a zero-margin design is rejected. Defaults give
+  80bps kept vs 75bps owed (a 5bps buffer). Enforced in `config.ts`.
 - **I5 — Solvency.** `treasury >= redemption_rate × total_whitelisted` at all
-  times. The relayer gates every payout on this (`canPayRedemption`), but today
-  only *it* enforces it — see residual risk R5.
+  times. **Authoritative enforcement is on-chain**: the mainnet treasury program
+  re-checks this at redemption time and rejects an insolvent payout regardless of
+  what the relayer does. The relayer also gates every payout (`canPayRedemption`)
+  as defense-in-depth and to avoid a doomed mainnet round-trip.
 
 ## 5. Threat model
 
@@ -94,12 +97,12 @@ counter; (A3) relayer ledger / idempotency state; (A4) the two signing keys.
 |---|---|---|---|---|
 | T1 | Whitelist minted without payment | bug or attacker calls whitelist directly | I1 ordering; on-chain, whitelist authority must be relayer-only and ideally require a fee-proof | R: devnet authority key compromise |
 | T2 | Double payout drains treasury | crash/retry, duplicate event, event replay | I3 idempotency keys; per-redemption PDA on-chain | low if keys are truly stable |
-| T3 | Pay out more than reserves back | mispriced params, external treasury drain | I4 config guard + I5 solvency gate | R5: off-chain-only check |
+| T3 | Pay out more than reserves back | mispriced params, external treasury drain | I4 strict-buffer config guard + on-chain solvency check (authoritative) + relayer gate | low (chain-enforced) |
 | T4 | Forged activation/redemption events | spoofed devnet events fed to relayer | adapter must verify events against finalized on-chain state, not trust a feed | depends on real adapter rigor |
 | T5 | Ledger tampering / loss | host compromise, disk loss | atomic writes; should reconcile against on-chain truth on boot | R: ledger is a cache, not source of truth |
-| T6 | Treasury key theft | host compromise, leaked secret | **unmitigated today** | R-critical (Section 7) |
-| T7 | Replay across restarts | reprocessing old cursors/events | cursors persisted; idempotency keys; recover() re-drives by record, not by re-emitting | low |
-| T8 | Fee underpayment / rounding leakage | integer truncation favoring user | all math in bigint lamports, floor division; fee floored, payout floored — never rounds in user's favor beyond 1 lamport | acceptable; revisit with buffer |
+| T6 | Treasury key theft / mass drain | host compromise, leaked relayer key | multisig treasury authority + on-chain rate limits; relayer-side per-payout cap (holds large redemptions) and per-tick payout cap (caps drain velocity) | R: residual until multisig + on-chain caps ship; relayer caps are defense-in-depth only |
+| T7 | Replay across restarts | reprocessing old cursors/events | cursors persisted; idempotency keys; reconcile re-drives by record, not by re-emitting | low |
+| T8 | Fee underpayment / rounding leakage | integer truncation favoring user | all math in bigint lamports, floor division; fee floored, payout floored — never rounds in user's favor beyond 1 lamport | acceptable; absorbed by the I4 buffer |
 
 ### Trust-boundary note
 Event bodies, balances, and any data the adapter ingests from a cluster are
@@ -110,56 +113,63 @@ unauthenticated push feed, or T4 becomes trivial.
 ## 6. Failure modes & recovery
 
 Cross-cluster writes cannot be atomic, so we choose orderings that fail safe and
-make every partial state recoverable. On restart, `watcher.recover()` re-drives
-any record not in a terminal state; idempotency makes re-driving safe.
+make every partial state recoverable. Every tick reconciles any record not in a
+terminal state (in addition to processing newly polled requests); idempotency
+makes re-driving safe.
 
-| Crash point | Resulting state | On recovery |
+| Crash / hold point | Resulting state | On reconcile |
 |---|---|---|
 | After fee, before whitelist | `FEE_COLLECTED` — user paid, not yet whitelisted | resume at whitelist (fee not re-charged) |
 | After burn observed, before payout | `OBSERVED`/`HALTED_INSOLVENT` — user owed | re-check solvency, pay (payout not duplicated) |
 | Mid ledger write | old file intact (atomic rename) | load last good state |
 | Treasury under-reserved at redemption | `HALTED_INSOLVENT`, counter already reflects burn | auto-pays once treasury is topped up |
+| Payout deferred by per-tick budget | `OBSERVED`, counter reflects burn | paid on a later tick as budget frees up |
+| Payout over per-payout cap | `HELD_OVER_CAP`, counter reflects burn | requires raising the cap / multisig approval, then a re-drive — never auto-paid |
 
 The asymmetry is deliberate: the safe failure is always "platform owes the
 user", never "user got value the platform didn't account for".
 
-## 7. Open decisions & hardening roadmap
+## 7. Decided design & hardening roadmap
 
-Ordered by risk. Items 1–2 should be settled **before** the Anchor programs
-lock the design in.
+### Adopted (relayer side implemented; on-chain enforcement to follow)
 
-1. **Key custody (addresses T6, the critical risk).** A hot key on the relayer
-   host is the single point of catastrophic failure. Options: HSM / KMS signing,
-   a multisig (e.g. Squads) treasury requiring N-of-M, withdrawal rate limits +
-   timelocks on the treasury program, and a hard cap on per-tick payout. At
-   minimum the treasury program should enforce limits the relayer *cannot*
-   exceed even if its key leaks.
-2. **Move solvency on-chain (addresses R5/T3).** Today only the relayer checks
-   I5; a buggy or malicious relayer can ignore it. The mainnet treasury program
-   should enforce `treasury >= rate × whitelisted` *itself* at redemption time,
-   reading an attested whitelisted-supply value. This makes solvency a chain
-   invariant, not a relayer promise.
-3. **Reserve buffer.** Default params give treasury-kept == redemption-owed
-   (0.8% == 0.8%): a **zero-buffer** design where any rounding, gas, or timing
-   slip tips it insolvent. Recommend a margin (e.g. redemption 0.75%, or a
-   reserve factor > 1) and bake it into the I4 guard.
-4. **Whitelisted-supply attestation.** I5 depends on a trustworthy
+- **D1 — Multisig key custody + on-chain rate limits (addresses T6).** The
+  mainnet treasury authority is an N-of-M multisig (e.g. Squads), and the
+  treasury program enforces withdrawal limits the relayer *cannot* exceed even
+  if its key leaks. **Relayer-side defense-in-depth, shipped:** a per-payout cap
+  (`MAX_PAYOUT_LAMPORTS` — single redemptions above it go to `HELD_OVER_CAP` for
+  manual/multisig approval) and a per-tick payout cap (`MAX_TICK_PAYOUT_LAMPORTS`
+  — caps total real SOL leaving per tick, deferring the rest). These mirror, but
+  do not replace, the on-chain limits.
+- **D2 — Solvency enforced on-chain (addresses T3).** The mainnet treasury
+  program re-checks `treasury >= rate × whitelisted` at redemption and rejects an
+  insolvent payout, making I5 a chain invariant rather than a relayer promise.
+  The relayer keeps its `canPayRedemption` gate as defense-in-depth. (See the
+  attestation dependency in R1 below.)
+- **D3 — Non-zero reserve buffer (shipped).** `config.ts` now *rejects* a
+  zero-margin design and defaults to 80bps treasury-kept vs 75bps owed. Floor
+  rounding (T8) is absorbed by the buffer.
+
+### Still open (need decisions before the Anchor programs lock in)
+
+R1. **Whitelisted-supply attestation.** D2's on-chain check depends on a trustworthy
    `total_whitelisted` number. Decide the source of truth: relayer counter
    (current, weak), an on-chain devnet aggregate, or a periodically attested
-   snapshot. This is the input both the on-chain check (item 2) and any audit
-   relies on.
-5. **Ledger reconciliation.** On boot, reconcile the local ledger against
+   snapshot. This is the input both the on-chain solvency check (D2) and any
+   audit relies on, and is the weakest link in D2 until resolved.
+R2. **Ledger reconciliation.** On boot, reconcile the local ledger against
    on-chain reality (treasury balance, processed-PDA set) so a tampered or stale
    ledger cannot silently violate invariants.
-6. **Decentralization / liveness.** A single relayer is also a liveness SPOF
+R3. **Decentralization / liveness.** A single relayer is also a liveness SPOF
    (redemptions stall if it is down). Longer term: multiple relayers with
    on-chain dedup, or permissionless redemption claims that the relayer only
    needs to *fund*, not *authorize*.
 
 ## 8. What the mock proves (and doesn't)
 
-The in-memory `MockAdapter` + tests exercise I1–I4 and all recovery paths
-honestly (idempotency, fail-safe ordering, insolvency-halt-then-recover). They
-do **not** model: real key custody, on-chain solvency enforcement, event
-authenticity, or network/finality behavior. Those land with the `SolanaAdapter`
-and the on-chain programs, and are exactly the items in Section 7.
+The in-memory `MockAdapter` + tests exercise I1–I4, the per-payout / per-tick
+caps, and all recovery paths honestly (idempotency, fail-safe ordering,
+insolvency-halt-then-recover, cap-defer-then-pay). They do **not** model: real
+multisig custody, the *on-chain* solvency check (D2) or rate limits (D1), the
+supply attestation (R1), event authenticity, or network/finality behavior. Those
+land with the `SolanaAdapter` and the on-chain programs.
