@@ -4,8 +4,43 @@ import type { LedgerStore } from "./ledger/store";
 import { logger } from "./logger";
 import type { ActivationProcessor } from "./processors/activation";
 import type { RedemptionProcessor } from "./processors/redemption";
-import type { RedemptionRecord } from "./types";
+import { solvencyView } from "./solvency";
+import type { Lamports, RedemptionRecord } from "./types";
 import { sleep } from "./util";
+
+export interface ReconciliationReport {
+  treasury: Lamports;
+  totalWhitelistedDevnet: Lamports;
+  required: Lamports;
+  solvent: boolean;
+  reserveBuffer: Lamports; // treasury - required; negative means under-reserved
+  pendingActivations: number; // fee collected but not yet whitelisted
+  pendingRedemptions: number; // OBSERVED — deferred/failed, auto-retried each tick
+  haltedRedemptions: number; // HALTED_INSOLVENT — auto-retries once treasury is topped up
+  heldRedemptions: number; // HELD_OVER_CAP — needs operator action (raise a cap / approve)
+}
+
+// Compares the persisted ledger against live on-chain reality (treasury balance)
+// and classifies any unfinished work. The local ledger is a cache, not the
+// source of truth, so this is the place to detect drift before the poll loop
+// starts acting on it.
+export async function reconcile(
+  store: LedgerStore,
+  adapter: OnChainAdapter,
+  cfg: RelayerConfig,
+): Promise<ReconciliationReport> {
+  const treasury = await adapter.getTreasuryBalance();
+  const view = solvencyView(treasury, store.getTotalWhitelisted(), cfg.redemptionRateBps);
+  const reds = store.listRedemptions();
+  return {
+    ...view,
+    reserveBuffer: view.treasury - view.required,
+    pendingActivations: store.listActivations().filter((r) => r.status !== "WHITELISTED").length,
+    pendingRedemptions: reds.filter((r) => r.status === "OBSERVED").length,
+    haltedRedemptions: reds.filter((r) => r.status === "HALTED_INSOLVENT").length,
+    heldRedemptions: reds.filter((r) => r.status === "HELD_OVER_CAP").length,
+  };
+}
 
 // Polls both clusters for new requests and drives them through the processors,
 // then reconciles any record left unfinished by a crash, a deferral, or a
@@ -70,10 +105,18 @@ export class Watcher {
 
   async start(signal: AbortSignal): Promise<void> {
     this.running = true;
-    const pendingActs = this.store.listActivations().filter((r) => r.status !== "WHITELISTED").length;
-    const pendingReds = this.store.listRedemptions().filter((r) => r.status !== "PAID").length;
-    if (pendingActs > 0 || pendingReds > 0) {
-      logger.info("resuming with unfinished work", { pendingActs, pendingReds });
+    const report = await reconcile(this.store, this.adapter, this.cfg);
+    logger.info("reconciliation", { ...report });
+    if (!report.solvent) {
+      logger.error("under-reserved at boot — redemptions will halt until treasury is topped up", {
+        treasury: report.treasury,
+        required: report.required,
+      });
+    }
+    if (report.heldRedemptions > 0) {
+      logger.warn("redemptions held over a payout cap — need operator action", {
+        heldRedemptions: report.heldRedemptions,
+      });
     }
     while (this.running && !signal.aborted) {
       try {
