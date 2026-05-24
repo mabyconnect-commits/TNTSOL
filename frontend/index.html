@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>TNTSOL — Design package</title>
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  body { background: var(--carbon); color: var(--bone); margin: 0; }
+  .page { max-width: 1280px; margin: 0 auto; padding: 64px 48px 96px; }
+
+  .head { padding-bottom: 32px; margin-bottom: 48px; border-bottom: 1px solid var(--ash); display: flex; align-items: end; justify-content: space-between; gap: 32px; }
+  .head .left h1 { font-family: var(--font-display); font-weight: 700; font-size: 56px; letter-spacing: -0.04em; margin: 16px 0 12px; line-height: 1; }
+  .head .left h1 em { font-style: normal; color: var(--tnt-red); }
+  .head .left .eyebrow { font-family: var(--font-mono); font-size: 12px; color: var(--tnt-red); letter-spacing: 0.16em; text-transform: uppercase; display: inline-flex; align-items: center; gap: 8px; }
+  .head .left .eyebrow::before { content: ''; width: 6px; height: 6px; background: var(--tnt-red); border-radius: 50%; box-shadow: 0 0 12px var(--tnt-red); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 50% { opacity: 0.4; } }
+  .head .left p { font-size: 16px; color: var(--bone); opacity: 0.78; max-width: 580px; line-height: 1.55; margin: 0; }
+  .head .right { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); display: flex; flex-direction: column; gap: 8px; text-align: right; }
+  .head .right b { color: var(--fuse-amber); }
+  .head .right .row { display: flex; gap: 6px; justify-content: flex-end; }
+
+  /* Section heads */
+  .section { margin-bottom: 64px; }
+  .section-head { display: flex; align-items: baseline; gap: 20px; margin-bottom: 24px; }
+  .section-head .n { font-family: var(--font-mono); font-size: 12px; color: var(--tnt-red); letter-spacing: 0.08em; }
+  .section-head h2 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -0.02em; margin: 0; }
+  .section-head .r { flex: 1; height: 1px; background: var(--ash); }
+  .section-head .s { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  /* Card grid */
+  .grid { display: grid; gap: 14px; }
+  .grid-3 { grid-template-columns: repeat(3, 1fr); }
+  .grid-4 { grid-template-columns: repeat(4, 1fr); }
+  .grid-2 { grid-template-columns: 1.4fr 1fr; }
+
+  .card {
+    border: 1px solid var(--ash); border-radius: var(--r-lg);
+    background: var(--soot); padding: 24px;
+    text-decoration: none; color: inherit;
+    display: flex; flex-direction: column; gap: 14px;
+    position: relative; overflow: hidden;
+    transition: border-color 0.15s, transform 0.15s;
+    min-height: 200px;
+  }
+  .card:hover { border-color: var(--tnt-red); transform: translateY(-2px); }
+  .card .tag { font-family: var(--font-mono); font-size: 10px; color: var(--tnt-red); letter-spacing: 0.14em; text-transform: uppercase; }
+  .card .name { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: -0.015em; line-height: 1.1; }
+  .card .desc { font-size: 13px; color: var(--bone); opacity: 0.78; line-height: 1.55; margin: 0; }
+  .card .cta { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); margin-top: auto; letter-spacing: 0.04em; display: flex; align-items: center; gap: 6px; }
+  .card .cta::after { content: '→'; }
+
+  .card.big { min-height: 280px; }
+  .card.big .name { font-size: 32px; }
+  .card.featured {
+    background:
+      radial-gradient(ellipse at 90% 10%, rgba(255,45,31,0.22), transparent 55%),
+      var(--soot);
+    border-color: var(--tnt-red-deep);
+  }
+
+  .card .preview {
+    margin-top: 4px; padding: 12px; border-radius: 8px;
+    background: var(--carbon); border: 1px solid var(--ash);
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .card .swatch-row { display: flex; gap: 6px; margin-top: 4px; }
+  .card .swatch-row .sw { flex: 1; height: 36px; border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header class="head">
+    <div class="left">
+      <div class="eyebrow">TNTSOL · Design package · v0.1</div>
+      <h1>Light the fuse.<br/>Trade the <em>blast.</em></h1>
+      <p>A complete design system and product UI for a permissionless devnet trading floor on Solana. From logo to landing page to dApp — every screen, every state, every fuse.</p>
+    </div>
+    <div class="right">
+      <div class="row"><span>STATUS</span> <b>DRAFT · v0.1</b></div>
+      <div class="row"><span>NETWORK</span> <b>devnet</b></div>
+      <div class="row"><span>SPEC</span> <b>f039710b</b></div>
+      <div class="row"><span>UPDATED</span> <b>2026.05.24</b></div>
+    </div>
+  </header>
+
+  <!-- 01 Brand -->
+  <section class="section">
+    <div class="section-head">
+      <div class="n">01</div>
+      <h2>Brand identity</h2>
+      <div class="r"></div>
+      <div class="s">Logo · color · type · voice</div>
+    </div>
+    <div class="grid grid-2">
+      <a class="card big featured" href="brand/Brand Identity.html">
+        <div class="tag">01 · BRAND SYSTEM</div>
+        <div class="name">Brand identity sheet</div>
+        <p class="desc">The complete identity package — logo lockups, color system with Solana DNA, type scale, iconography, voice & tone, and applied examples.</p>
+        <div style="display: flex; gap: 8px; align-items: center; padding: 14px 16px; background: var(--carbon); border: 1px solid var(--ash); border-radius: 10px;">
+          <svg width="40" height="54" viewBox="0 0 80 110">
+            <path d="M40 28 C 40 14, 60 14, 68 4" fill="none" stroke="#FFB627" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="68" cy="4" r="4" fill="#FFB627"/>
+            <rect x="11" y="25" width="58" height="9" rx="2" fill="#0A0908"/>
+            <rect x="11" y="33" width="58" height="68" rx="5" fill="#FF2D1F"/>
+            <text x="40" y="74" text-anchor="middle" font-family="JetBrains Mono, monospace" font-weight="700" font-size="15" fill="#FFF6E8" letter-spacing="0.05em">TNT</text>
+          </svg>
+          <div style="font-family: var(--font-display); font-weight: 700; font-size: 36px; letter-spacing: -0.045em;">TNT<span style="color: var(--tnt-red);">SOL</span></div>
+        </div>
+        <div class="cta">Open brand identity</div>
+      </a>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <a class="card" href="brand/Brand Identity.html">
+          <div class="tag">PALETTE</div>
+          <div class="name" style="font-size: 18px;">Color system</div>
+          <div class="swatch-row">
+            <div class="sw" style="background: #FF2D1F;"></div>
+            <div class="sw" style="background: #FFB627;"></div>
+            <div class="sw" style="background: #14F195;"></div>
+            <div class="sw" style="background: #9945FF;"></div>
+            <div class="sw" style="background: #0A0908; border: 1px solid var(--ash);"></div>
+          </div>
+          <p class="desc" style="font-size: 12px;">Detonator Red · Fuse Amber · Solana Green · Solana Purple · Carbon</p>
+        </a>
+        <a class="card" href="brand/Brand Identity.html">
+          <div class="tag">TYPE</div>
+          <div class="name" style="font-size: 18px;">Type system</div>
+          <div style="display: flex; align-items: baseline; gap: 12px;">
+            <div style="font-family: var(--font-display); font-weight: 700; font-size: 48px; letter-spacing: -0.04em; line-height: 1; color: var(--tnt-red);">Aa</div>
+            <div style="font-family: var(--font-mono); font-weight: 700; font-size: 32px; letter-spacing: -0.02em; line-height: 1;">Aa</div>
+          </div>
+          <p class="desc" style="font-size: 12px;">Space Grotesk · JetBrains Mono</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 Marketing -->
+  <section class="section">
+    <div class="section-head">
+      <div class="n">02</div>
+      <h2>Marketing &amp; landing</h2>
+      <div class="r"></div>
+      <div class="s">Public-facing surfaces</div>
+    </div>
+    <div class="grid grid-3">
+      <a class="card" href="product/Landing.html">
+        <div class="tag">LANDING</div>
+        <div class="name">Marketing site</div>
+        <p class="desc">Hero, stats strip, 3-step how-it-works, feature rows, and CTA. The pitch in one scroll.</p>
+        <div class="cta">Open landing</div>
+      </a>
+    </div>
+  </section>
+
+  <!-- 03 Product UI - desktop -->
+  <section class="section">
+    <div class="section-head">
+      <div class="n">03</div>
+      <h2>Product UI · Desktop</h2>
+      <div class="r"></div>
+      <div class="s">dApp screens · 1280+ viewport</div>
+    </div>
+    <div class="grid grid-4">
+      <a class="card" href="product/screens/Floor.html">
+        <div class="tag">FLOOR</div>
+        <div class="name">The Floor</div>
+        <p class="desc">Live discovery feed — graduating now, sparks, climbing tokens, with live trade rail.</p>
+        <div class="cta">Open</div>
+      </a>
+      <a class="card" href="product/screens/Token.html">
+        <div class="tag">TOKEN</div>
+        <div class="name">Token detail</div>
+        <p class="desc">Price chart, curve meter, holders, and the trade panel with activation receipt.</p>
+        <div class="cta">Open</div>
+      </a>
+      <a class="card" href="product/screens/Portfolio.html">
+        <div class="tag">PORTFOLIO</div>
+        <div class="name">Bucket portfolio</div>
+        <p class="desc">Net worth split by whitelist / blacklist, with one-click activation banner.</p>
+        <div class="cta">Open</div>
+      </a>
+      <a class="card" href="product/screens/Launch.html">
+        <div class="tag">LAUNCH</div>
+        <div class="name">Light a token</div>
+        <p class="desc">Token launch flow — identity, socials, curve params, with live preview.</p>
+        <div class="cta">Open</div>
+      </a>
+      <a class="card" href="product/screens/Redeem.html">
+        <div class="tag">REDEEM</div>
+        <div class="name">Cash out</div>
+        <p class="desc">Convert whitelist devSOL to real mainnet SOL — 4-step flow with treasury card.</p>
+        <div class="cta">Open</div>
+      </a>
+      <a class="card" href="product/TxStates.html">
+        <div class="tag">TX STATES</div>
+        <div class="name">Transaction modals</div>
+        <p class="desc">12 modal states — sign, broadcast, settle, activate, slippage, rejected, graduation imminent.</p>
+        <div class="cta">Open</div>
+      </a>
+      <a class="card" href="product/Admin.html">
+        <div class="tag">OPERATOR</div>
+        <div class="name">Treasury / admin</div>
+        <p class="desc">Reserve gauge, redemption queue, launch audit, fee config, live audit log.</p>
+        <div class="cta">Open</div>
+      </a>
+      <a class="card featured" href="product/Graduation.html">
+        <div class="tag" style="color: var(--fuse-amber);">★ ANIMATION</div>
+        <div class="name">The Blast — graduation animation</div>
+        <p class="desc">6-second scrubbable scene: curve closes, fuse hits 100%, detonation particles, $PEPED graduates.</p>
+        <div class="cta">Play</div>
+      </a>
+    </div>
+  </section>
+
+  <!-- 04 Brand applied / social -->
+  <section class="section">
+    <div class="section-head">
+      <div class="n">04</div>
+      <h2>Brand applied</h2>
+      <div class="r"></div>
+      <div class="s">Social · merch · notifications</div>
+    </div>
+    <div class="grid grid-3">
+      <a class="card big" href="product/Social.html">
+        <div class="tag">SOCIAL · MERCH</div>
+        <div class="name">Applied brand surfaces</div>
+        <p class="desc">OG cards · Twitter banner · 6 avatars · sticker pack · t-shirt · hoodie · email header · notification system.</p>
+        <div class="cta">Open</div>
+      </a>
+    </div>
+  </section>
+
+  <!-- 05 Mobile -->
+  <section class="section">
+    <div class="section-head">
+      <div class="n">05</div>
+      <h2>Product UI · Mobile</h2>
+      <div class="r"></div>
+      <div class="s">iOS · 390×844</div>
+    </div>
+    <div class="grid grid-3">
+      <a class="card big" href="product/Mobile.html">
+        <div class="tag">MOBILE · 5 SCREENS</div>
+        <div class="name">iOS app screens</div>
+        <p class="desc">Floor · Token detail · Portfolio · Wallet connect · Activate modal. Built at 390×844 with iOS 26 frames.</p>
+        <div class="cta">Open mobile gallery</div>
+      </a>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>
