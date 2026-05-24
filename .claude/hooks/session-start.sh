@@ -12,7 +12,7 @@ fi
 ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
 ENV_FILE="${CLAUDE_ENV_FILE:-/dev/null}"
 SOLANA_VER="v4.0.0"
-ANCHOR_VER="0.30.1"
+ANCHOR_VER="0.32.1"
 
 # Append an export to the session env file once (idempotent across resumes).
 add_path() {
