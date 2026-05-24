@@ -123,7 +123,8 @@ makes re-driving safe.
 | After burn observed, before payout | `OBSERVED`/`HALTED_INSOLVENT` — user owed | re-check solvency, pay (payout not duplicated) |
 | Mid ledger write | old file intact (atomic rename) | load last good state |
 | Treasury under-reserved at redemption | `HALTED_INSOLVENT`, counter already reflects burn | auto-pays once treasury is topped up |
-| Payout deferred by per-tick budget | `OBSERVED`, counter reflects burn | paid on a later tick as budget frees up |
+| Payout exceeds *remaining* tick budget | `OBSERVED`, counter reflects burn | paid on a later tick as budget frees up |
+| Payout exceeds a *full* tick budget | `HELD_OVER_CAP`, counter reflects burn | held (would otherwise defer forever); needs the tick cap raised, then a re-drive |
 | Payout over per-payout cap | `HELD_OVER_CAP`, counter reflects burn | requires raising the cap / multisig approval, then a re-drive — never auto-paid |
 
 The asymmetry is deliberate: the safe failure is always "platform owes the

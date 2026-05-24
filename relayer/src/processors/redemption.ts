@@ -54,10 +54,14 @@ export class RedemptionProcessor {
       return rec; // requires raising the cap / explicit approval, then a re-drive
     }
 
-    // Per-tick budget: defer if this payout would exceed what the relayer may
-    // still pay this tick. Rate-limits drain velocity; retried next tick.
+    // Per-tick budget. If the payout exceeds even a full, fresh tick budget it
+    // can never be paid by the tick mechanism, so hold it for operator action
+    // (raise the tick cap) rather than deferring it forever. Otherwise it merely
+    // exceeds the *remaining* budget this tick and is retried on a later tick.
     if (tickBudgetRemaining !== undefined && rec.payoutLamports > tickBudgetRemaining) {
-      rec = { ...rec, status: "OBSERVED", updatedAt: now() };
+      const exceedsFullTick =
+        this.cfg.maxTickPayoutLamports > 0n && rec.payoutLamports > this.cfg.maxTickPayoutLamports;
+      rec = { ...rec, status: exceedsFullTick ? "HELD_OVER_CAP" : "OBSERVED", updatedAt: now() };
       await this.store.putRedemption(rec);
       return rec;
     }

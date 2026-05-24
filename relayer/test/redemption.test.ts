@@ -122,6 +122,32 @@ test("redemption: a single payout over the per-payout cap is held for approval",
   }
 });
 
+test("redemption: a payout larger than the whole tick budget is held, not deferred forever", async () => {
+  const { store, cleanup } = await tmpStore();
+  try {
+    const adapter = new MockAdapter();
+    const base = loadConfig({});
+    const payout = redemptionPayout(30n * SOL, base.redemptionRateBps);
+    // Per-payout cap unlimited, but the tick cap is below a single payout — the
+    // dangerous case that would otherwise defer this redemption forever.
+    const cfg = loadConfig({ MAX_TICK_PAYOUT_LAMPORTS: (payout - 1n).toString() });
+    await prime(adapter, store, cfg, 100n);
+    const treasuryBefore = await adapter.getTreasuryBalance();
+
+    const proc = new RedemptionProcessor(store, adapter, cfg);
+    const rec = await proc.process(
+      { id: "rt", user: "U", whitelistedDevnetAmount: 30n * SOL },
+      cfg.maxTickPayoutLamports, // a full, fresh tick budget
+    );
+
+    assert.equal(rec.status, "HELD_OVER_CAP");
+    assert.equal(store.getTotalWhitelisted(), 70n * SOL); // burn mirrored
+    assert.equal(await adapter.getTreasuryBalance(), treasuryBefore); // nothing paid
+  } finally {
+    await cleanup();
+  }
+});
+
 test("redemption: payout exceeding the remaining tick budget is deferred, then paid", async () => {
   const { store, cleanup } = await tmpStore();
   try {
