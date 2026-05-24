@@ -35,12 +35,21 @@ npm run build    # production build (also typechecks)
 
 ## Deploy (Vercel)
 
-This app lives in the `frontend/` subdirectory of the monorepo, so set the
-Vercel project's **Root Directory** to `frontend`:
+The app is a **static export** (`output: "export"` → `frontend/out`), and the
+repo-root [`vercel.json`](../vercel.json) tells Vercel how to build it from the
+monorepo. So a plain import with all defaults works — no project settings:
 
 1. <https://vercel.com/new> → import the repo.
-2. **Root Directory:** `frontend` (Vercel auto-detects Next.js — leave build
-   command / output dir at the Next.js defaults).
-3. Deploy. Pushes to the production branch redeploy; PRs get preview URLs.
+2. Leave everything at defaults and **Deploy**. The root `vercel.json` runs the
+   build in `frontend/` and serves `frontend/out`.
 
-No secrets or tokens required — Vercel's Git integration handles auth.
+Pushes to the production branch redeploy; PRs get preview URLs. No secrets or
+tokens required.
+
+> Alternatively (without the root `vercel.json`): set the project's **Root
+> Directory** to `frontend` and Vercel auto-detects Next.js. Either path works.
+
+Because it's a static export there are no server routes/SSR — fine for this
+prototype. Wiring real wallet/chain calls later may want SSR; drop the
+`output: "export"` line in `next.config.mjs` and deploy with Root Directory =
+`frontend` at that point.
