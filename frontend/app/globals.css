@@ -917,19 +917,26 @@ textarea.input { resize: vertical; min-height: 90px; font-family: var(--font-dis
   .token-header .th-actions { display: none; }
   .price-hero { grid-template-columns: 1fr 1fr; }
   .chart-area { height: 200px; }
-  .holder-row { grid-template-columns: 28px 1.5fr 1fr 64px; }
+  .holder-row { grid-template-columns: 28px minmax(0, 1.5fr) auto 56px; gap: 8px; }
   .holder-row > :nth-child(4), .holder-row > :nth-child(5) { display: none; }
+  .holder-row .who { min-width: 0; }
+  .holder-row .who .addr { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .holder-row > .num { white-space: nowrap; text-align: right; }
 
   /* ---- Portfolio ---- */
   .pmain { padding: 16px 14px 88px; height: auto; overflow: visible; }
   .p-header { grid-template-columns: 1fr; gap: 14px; }
+  .p-header .actions { flex-wrap: wrap; }
   .bh-row { grid-template-columns: 1fr; gap: 22px; }
   .bucket-donut { margin: 0 auto; }
   .stats-strip { grid-template-columns: 1fr 1fr; }
   .act-banner { grid-template-columns: 1fr; }
   .h-head { display: none; }
-  .h-row { grid-template-columns: 1.6fr 1fr 56px; }
+  .h-row { grid-template-columns: minmax(0, 1.6fr) auto 56px; gap: 10px; }
   .h-row > :nth-child(2), .h-row > :nth-child(3), .h-row > :nth-child(5), .h-row > :nth-child(7) { display: none; }
+  .h-cell, .h-cell .info { min-width: 0; }
+  .h-cell .info .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .h-row > .num { white-space: nowrap; text-align: right; }
   .tw-grid { grid-template-columns: 1fr; }
   .curve-line { grid-template-columns: 1fr; gap: 8px; }
 
@@ -940,6 +947,14 @@ textarea.input { resize: vertical; min-height: 90px; font-family: var(--font-dis
   .r-h-head { display: none; }
   .r-h-row { grid-template-columns: 1fr 1fr 90px; }
   .r-h-row > :nth-child(2), .r-h-row > :nth-child(3), .r-h-row > :nth-child(6) { display: none; }
+  .r-h-row > .num { white-space: nowrap; }
+  /* Step indicator: compact dots; only the active step keeps its label so the
+     4 steps fit a phone width instead of overflowing. */
+  .r-steps { gap: 8px; margin-bottom: 28px; flex-wrap: nowrap; }
+  .r-step { gap: 6px; }
+  .r-step .lbl { display: none; font-size: 11px; }
+  .r-step.active .lbl { display: block; }
+  .r-step::after { width: 16px; margin-left: 8px; }
 
   /* ---- Launch ---- */
   .lmain { padding: 16px 14px 88px; height: auto; overflow: visible; }
