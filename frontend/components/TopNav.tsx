@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import BrandMark from "./BrandMark";
 import { useWallet } from "./WalletProvider";
+import { useToast } from "./Toast";
 
 const TABS = [
   { href: "/", label: "Floor" },
@@ -20,6 +21,16 @@ function isActive(pathname: string, href: string) {
 export default function TopNav() {
   const pathname = usePathname();
   const wallet = useWallet();
+  const toast = useToast();
+
+  function airdrop() {
+    toast.runTx({
+      pending: { title: "Requesting devnet airdrop…", sub: "1 devSOL → your wallet" },
+      success: { title: "Airdrop confirmed", sub: "+1 devSOL" },
+      errorTitle: "Airdrop failed",
+      action: () => wallet.requestAirdrop(),
+    });
+  }
 
   return (
     <header className="topnav">
@@ -54,17 +65,22 @@ export default function TopNav() {
           Light a fuse
         </Link>
         {wallet.connected ? (
-          <button className="wallet-pill" onClick={wallet.disconnect} title="Disconnect" style={{ cursor: "pointer" }}>
-            <span className="av" />
-            <span className="addr">{wallet.address}</span>
-            <span className="bal">
-              {wallet.devBalance.toFixed(2)}
-              <small>devSOL</small>
-            </span>
-          </button>
+          <>
+            <button className="btn btn-ghost btn-sm" onClick={airdrop} title="Devnet faucet · airdrop 1 devSOL">
+              ⛽
+            </button>
+            <button className="wallet-pill" onClick={wallet.disconnect} title="Click to disconnect" style={{ cursor: "pointer" }}>
+              <span className="av" />
+              <span className="addr">{wallet.address}</span>
+              <span className="bal">
+                {wallet.devBalance === null ? "…" : wallet.devBalance.toFixed(2)}
+                <small>devSOL</small>
+              </span>
+            </button>
+          </>
         ) : (
-          <button className="btn btn-primary btn-sm" onClick={wallet.connect}>
-            Connect wallet
+          <button className="btn btn-primary btn-sm" onClick={wallet.openModal}>
+            {wallet.connecting ? "Connecting…" : "Connect wallet"}
           </button>
         )}
       </div>

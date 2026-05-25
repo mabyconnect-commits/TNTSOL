@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { WalletProvider } from "@/components/WalletProvider";
+import { ToastProvider } from "@/components/Toast";
 import TopNav from "@/components/TopNav";
 import MobileNav from "@/components/MobileNav";
 
@@ -20,11 +21,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <WalletProvider>
-          <div className="app">
-            <TopNav />
-            {children}
-            <MobileNav />
-          </div>
+          <ToastProvider>
+            <div className="app">
+              <TopNav />
+              {children}
+              <MobileNav />
+            </div>
+          </ToastProvider>
         </WalletProvider>
       </body>
     </html>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { WHITELIST_BALANCE } from "@/lib/data";
 import { useWallet } from "./WalletProvider";
+import { useToast } from "./Toast";
 
 const RATE = 0.8; // 1 devSOL -> 0.80 SOL gross
 const FEE = 0.008; // 0.8% redemption fee
@@ -10,6 +11,7 @@ const NETWORK = 0.000005;
 
 export default function RedeemPanel() {
   const wallet = useWallet();
+  const toast = useToast();
   const [amount, setAmount] = useState(WHITELIST_BALANCE.toFixed(2));
   const amt = Math.min(parseFloat(amount) || 0, WHITELIST_BALANCE);
 
@@ -21,6 +23,18 @@ export default function RedeemPanel() {
   function applyPreset(p: string) {
     const pct = p === "MAX" ? 100 : parseInt(p);
     setAmount(((WHITELIST_BALANCE * pct) / 100).toFixed(2));
+  }
+
+  function confirm() {
+    if (!wallet.connected) {
+      wallet.openModal();
+      return;
+    }
+    toast.runTx({
+      pending: { title: "Redeeming to mainnet…", sub: `${amt.toFixed(2)} devSOL → SOL` },
+      success: { title: "Redemption settled", sub: `+${net.toFixed(4)} SOL` },
+      errorTitle: "Redemption failed",
+    });
   }
 
   return (
@@ -45,7 +59,7 @@ export default function RedeemPanel() {
         </div>
         <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--concrete)", marginTop: 12, display: "flex", justifyContent: "space-between" }}>
           <span>Whitelist available: <b style={{ color: "var(--bone)" }}>{WHITELIST_BALANCE} devSOL</b></span>
-          <span>Mainnet wallet: <b style={{ color: "var(--bone)" }}>{wallet.address}</b></span>
+          <span>Mainnet wallet: <b style={{ color: "var(--bone)" }}>{wallet.address || "Connect wallet"}</b></span>
         </div>
       </div>
 
@@ -62,7 +76,9 @@ export default function RedeemPanel() {
         </div>
 
         <div className="r-action">
-          <button className="btn-r" disabled={!wallet.connected || amt <= 0}>✓ Confirm redemption</button>
+          <button className="btn-r" onClick={confirm} disabled={amt <= 0}>
+            {wallet.connected ? "✓ Confirm redemption" : "Connect wallet to redeem"}
+          </button>
           <div className="r-info">
             Treasury reserves <b>1,284 SOL</b> · ~149× this amount<br />
             <span style={{ color: "var(--gravel)" }}>Settles in 1 transaction · est. 412ms</span>

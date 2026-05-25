@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { useWallet } from "./WalletProvider";
+import { useToast } from "./Toast";
 
 export default function LaunchForm() {
   const wallet = useWallet();
+  const toast = useToast();
+  const who = wallet.address || "your wallet";
   const [name, setName] = useState("Pepe Detonator");
   const [ticker, setTicker] = useState("PEPED");
   const [desc, setDesc] = useState("A frog with a fuse. Liquidity until graduation. No promises, no roadmap — just curve.");
@@ -15,6 +18,18 @@ export default function LaunchForm() {
   const total = 0.02 + buy + activation; // curve init + initial buy + activation fee
   const avatar = (name.trim()[0] || "P").toUpperCase();
   const gradPct = Math.min((buy / 85) * 100, 100);
+
+  function launch() {
+    if (!wallet.connected) {
+      wallet.openModal();
+      return;
+    }
+    toast.runTx({
+      pending: { title: "Lighting the fuse…", sub: `Minting $${ticker || "TOKEN"} + opening curve` },
+      success: { title: `$${ticker || "TOKEN"} launched`, sub: "Curve open · see Portfolio → Launched" },
+      errorTitle: "Launch failed",
+    });
+  }
 
   return (
     <div className="lwrap">
@@ -106,7 +121,7 @@ export default function LaunchForm() {
               <div className="av">{avatar}</div>
               <div>
                 <div className="nm">{name || "Untitled"} <span style={{ fontFamily: "var(--font-mono)", color: "var(--concrete)", fontWeight: 500, fontSize: 13 }}>${ticker || "TICKER"}</span></div>
-                <div className="sm">launched by {wallet.address} · just now</div>
+                <div className="sm">launched by {who} · just now</div>
               </div>
             </div>
             <div className="bio">{desc}</div>
@@ -128,10 +143,10 @@ export default function LaunchForm() {
             <p>Your token is mintable in 1 click. Curve opens at slot+1.</p>
           </div>
 
-          <button className="btn-light" disabled={!wallet.connected}>⚡ Light the fuse</button>
+          <button className="btn-light" onClick={launch}>{wallet.connected ? "⚡ Light the fuse" : "Connect wallet to launch"}</button>
 
           <div style={{ fontFamily: "var(--font-mono)", fontSize: 11, color: "var(--concrete)", textAlign: "center", lineHeight: 1.5 }}>
-            Signed with <b style={{ color: "var(--bone)" }}>{wallet.address}</b><br />
+            Signed with <b style={{ color: "var(--bone)" }}>{who}</b><br />
             <span style={{ color: "var(--gravel)" }}>Tx will appear in &apos;Portfolio → Launched&apos;</span>
           </div>
         </div>

@@ -4,12 +4,15 @@ import { useMemo, useState } from "react";
 import { Token } from "@/lib/data";
 import { buyTokensOut, sellSolOut, fmt } from "@/lib/format";
 import { useWallet } from "./WalletProvider";
+import { useToast } from "./Toast";
 
 export default function TradePanel({ token }: { token: Token }) {
   const wallet = useWallet();
+  const toast = useToast();
   const [mode, setMode] = useState<"buy" | "sell">("buy");
   const [amount, setAmount] = useState("0.5");
   const tokenBalance = 12400; // mock position
+  const bal = wallet.devBalance ?? 0;
 
   const amt = parseFloat(amount) || 0;
 
@@ -29,12 +32,28 @@ export default function TradePanel({ token }: { token: Token }) {
 
   function applyPreset(p: string) {
     if (mode === "buy") {
-      if (p === "MAX") setAmount(String(wallet.devBalance));
+      if (p === "MAX") setAmount(String(bal));
       else setAmount(p);
     } else {
       if (p === "MAX") setAmount(String(tokenBalance));
       else setAmount(String(Math.round((tokenBalance * parseInt(p)) / 100)));
     }
+  }
+
+  function submit() {
+    if (!wallet.connected) {
+      wallet.openModal();
+      return;
+    }
+    const buying = mode === "buy";
+    toast.runTx({
+      pending: { title: `${buying ? "Buying" : "Selling"} ${token.sym}…`, sub: `${fmt(amt, 4)} ${calc.payLabel} · curve` },
+      success: {
+        title: `${buying ? "Bought" : "Sold"} ${token.sym}`,
+        sub: `+${fmt(calc.out, buying ? 2 : 4)} ${calc.outLabel}`,
+      },
+      errorTitle: "Trade failed",
+    });
   }
 
   return (
@@ -60,7 +79,7 @@ export default function TradePanel({ token }: { token: Token }) {
           </div>
           <div className="amount-meta">
             <span>≈ {fmt(calc.out, 2)} {calc.outLabel}</span>
-            <span className="max">{mode === "buy" ? `MAX · ${wallet.devBalance}` : `MAX · ${fmt(tokenBalance, 0)}`}</span>
+            <span className="max">{mode === "buy" ? `MAX · ${bal.toFixed(2)}` : `MAX · ${fmt(tokenBalance, 0)}`}</span>
           </div>
           <div className="preset-row">
             {presets.map((p) => (
@@ -91,7 +110,7 @@ export default function TradePanel({ token }: { token: Token }) {
           <div className="r total"><span className="k">You receive</span><span className="v">+{fmt(calc.out, 2)} {calc.outLabel}</span></div>
         </div>
 
-        <button className="btn-detonate" disabled={!wallet.connected}>
+        <button className="btn-detonate" onClick={submit}>
           {wallet.connected ? `⚡ Light the fuse → ${mode === "buy" ? "Buy" : "Sell"} ${token.sym}` : "Connect wallet to trade"}
         </button>
 
