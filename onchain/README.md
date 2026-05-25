@@ -15,6 +15,9 @@ Anchor workspace implementing the design in
 - **Builds + unit-tested on host:** `cargo test` passes (9 tests covering the
   payout/fee/reserve math and config guards); `cargo check` clean apart from
   Anchor's benign `anchor-debug` cfg warnings. Pinned to anchor-lang 0.32.1.
+- **Integration-tested on a local validator:** `tests/platform.ts` exercises the
+  I1 grant / I2 burn flow + guards (6 passing) against `solana-test-validator`.
+  Run with `npm test` (or `npm run test:fast` to skip the rebuild) — see below.
 - **SBF build works:** `anchor build` produces `target/deploy/{platform,treasury}.so`
   (~267K / ~317K) plus IDLs. The session-start hook pre-installs SBF
   platform-tools (fetched via curl, since cargo-build-sbf's own downloader trips
@@ -66,6 +69,20 @@ anchor deploy --provider.cluster devnet            # deploys `platform`
 
 `anchor keys sync` is already done (IDs above); re-run it only if you regenerate
 the program keypairs.
+
+## Integration tests (local validator)
+
+```sh
+npm install
+npm test            # builds, boots a fresh validator, deploys, runs tests/*.ts
+npm run test:fast   # same but skips the rebuild
+```
+
+`scripts/anchor-test.sh` starts `solana-test-validator` itself and runs
+`anchor test --skip-local-validator`. We don't let `anchor test` manage the
+validator because in some sandboxes its port-availability probe false-positives
+("rpc port 8899 is already in use" with nothing listening); the script frees the
+port by number and tears the validator down on exit.
 
 ## What still needs doing before mainnet
 

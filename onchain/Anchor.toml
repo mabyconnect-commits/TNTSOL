@@ -5,18 +5,22 @@ anchor_version = "0.32.1"
 resolution = true
 skip-lint = false
 
+[programs.localnet]
+platform = "E2DwHR9UdVgcdAZ4TpkjUY65x8s5qJ6TLHDh1n8gChAo"
+treasury = "Ccucx2681CT5JhV181myXGx1ZVh7n4nrFb83njNEmaZj"
+
 [programs.devnet]
 platform = "E2DwHR9UdVgcdAZ4TpkjUY65x8s5qJ6TLHDh1n8gChAo"
 
 [programs.mainnet]
-treasury = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+treasury = "Ccucx2681CT5JhV181myXGx1ZVh7n4nrFb83njNEmaZj"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "echo 'no anchor tests yet'"
+test = "npx ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
