@@ -925,24 +925,26 @@ textarea.input { resize: vertical; min-height: 90px; font-family: var(--font-dis
 
   /* ---- Portfolio ---- */
   .pmain { padding: 16px 14px 88px; height: auto; overflow: visible; }
-  .p-header { grid-template-columns: 1fr; gap: 14px; }
+  .p-header { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .p-header .actions { flex-wrap: wrap; }
-  .bh-row { grid-template-columns: 1fr; gap: 22px; }
+  .bh-row { grid-template-columns: minmax(0, 1fr); gap: 22px; }
   .bucket-donut { margin: 0 auto; }
   .stats-strip { grid-template-columns: 1fr 1fr; }
-  .act-banner { grid-template-columns: 1fr; }
+  .act-banner { grid-template-columns: minmax(0, 1fr); }
   .h-head { display: none; }
   .h-row { grid-template-columns: minmax(0, 1.6fr) auto 56px; gap: 10px; }
   .h-row > :nth-child(2), .h-row > :nth-child(3), .h-row > :nth-child(5), .h-row > :nth-child(7) { display: none; }
   .h-cell, .h-cell .info { min-width: 0; }
   .h-cell .info .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .h-row > .num { white-space: nowrap; text-align: right; }
-  .tw-grid { grid-template-columns: 1fr; }
-  .curve-line { grid-template-columns: 1fr; gap: 8px; }
+  .tw-grid { grid-template-columns: minmax(0, 1fr); }
+  .curve-line { grid-template-columns: minmax(0, 1fr); gap: 8px; }
 
   /* ---- Redeem ---- */
   .rmain { padding: 16px 14px 88px; height: auto; overflow: visible; }
-  .r-card { grid-template-columns: 1fr; gap: 22px; }
+  .r-card { grid-template-columns: minmax(0, 1fr); gap: 22px; padding: 16px; }
+  .r-presets { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+  .r-preset { padding: 8px 4px; font-size: 11px; text-align: center; }
   .r-treasury { grid-template-columns: 1fr 1fr; }
   .r-h-head { display: none; }
   .r-h-row { grid-template-columns: 1fr 1fr 90px; }
@@ -958,15 +960,15 @@ textarea.input { resize: vertical; min-height: 90px; font-family: var(--font-dis
 
   /* ---- Launch ---- */
   .lmain { padding: 16px 14px 88px; height: auto; overflow: visible; }
-  .lwrap { grid-template-columns: 1fr; gap: 24px; }
+  .lwrap { grid-template-columns: minmax(0, 1fr); gap: 24px; }
   .l-preview { position: static; }
-  .input-row { grid-template-columns: 1fr; }
-  .socials { grid-template-columns: 1fr; }
+  .input-row { grid-template-columns: minmax(0, 1fr); }
+  .socials { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (max-width: 480px) {
   .price-hero { grid-template-columns: 1fr 1fr; }
-  .stats-strip { grid-template-columns: 1fr; }
-  .r-treasury { grid-template-columns: 1fr; }
-  .bucket-legend { grid-template-columns: 1fr; }
+  .stats-strip { grid-template-columns: minmax(0, 1fr); }
+  .r-treasury { grid-template-columns: minmax(0, 1fr); }
+  .bucket-legend { grid-template-columns: minmax(0, 1fr); }
 }
