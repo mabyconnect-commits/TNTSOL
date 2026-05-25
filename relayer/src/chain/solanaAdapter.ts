@@ -50,7 +50,12 @@ export class SolanaAdapter implements OnChainAdapter {
   }
 
   async pollActivationRequests(_cursor: string | null): Promise<PollResult<ActivationRequest>> {
-    // TODO: subscribe to / page the devnet program's activation events.
+    // TODO: page the devnet platform program's `Activated` events (emitted by
+    // curve.buy -> program_activate). Each carries { user, activated,
+    // fee_owed_mainnet }. Emit one ActivationRequest per event with
+    // `preWhitelisted: true` and devnetAmount = activated — the on-chain program
+    // already moved the funds blacklisted->whitelisted, so the relayer only
+    // collects the mainnet fee. Use the devnet tx signature as the idempotent id.
     throw new Error("SolanaAdapter.pollActivationRequests not implemented");
   }
 

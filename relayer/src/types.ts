@@ -7,6 +7,12 @@ export interface ActivationRequest {
   id: string; // unique, idempotent key (e.g. the devnet trade signature)
   user: string; // base58 pubkey
   devnetAmount: Lamports; // amount of blacklisted devnet SOL being activated
+  // True when the devnet whitelist already happened ON-CHAIN (curve.buy ->
+  // platform.program_activate). The relayer then only owes the mainnet fee and
+  // must NOT re-whitelist. NOTE: this inverts the fail-safe ordering — the
+  // whitelist precedes the fee — so an uncollectable fee leaves a user
+  // whitelisted-but-unpaid. See ActivationProcessor for the guard/risk note.
+  preWhitelisted?: boolean;
 }
 
 // A redemption: the user has already BURNED whitelisted devnet SOL on devnet,
@@ -31,6 +37,7 @@ export interface ActivationRecord {
   feeTreasuryLamports: Lamports; // mainnet portion that stays in treasury
   feeTeamLamports: Lamports; // mainnet portion paid to the team wallet
   status: ActivationStatus;
+  preWhitelisted?: boolean; // whitelist happened on-chain; relayer only owes the fee
   mainnetFeeSig?: string;
   devnetWhitelistSig?: string;
   error?: string;

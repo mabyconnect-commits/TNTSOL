@@ -84,3 +84,28 @@ test("activation: reprocessing a completed request is a no-op", async () => {
     await cleanup();
   }
 });
+
+test("activation: pre-whitelisted (curve) path collects the fee but does NOT re-whitelist on-chain", async () => {
+  const { store, cleanup } = await tmpStore();
+  try {
+    const adapter = new MockAdapter();
+    const cfg = loadConfig({});
+    const proc = new ActivationProcessor(store, adapter, cfg);
+
+    // curve.buy already whitelisted on-chain; relayer only owes the mainnet fee.
+    const rec = await proc.process({ id: "a4", user: "U", devnetAmount: 100n * SOL, preWhitelisted: true });
+
+    assert.equal(rec.status, "WHITELISTED");
+    assert.equal(rec.devnetWhitelistSig, "on-chain");
+    assert.equal(await adapter.getTreasuryBalance(), 800_000_000n); // fee collected
+    assert.equal(adapter.whitelistOf("U"), 0n); // NOT re-whitelisted via the adapter
+    assert.equal(store.getTotalWhitelisted(), 100n * SOL); // mirrored into the solvency counter
+
+    // Idempotent: reprocessing doesn't double-charge or double-count.
+    await proc.process({ id: "a4", user: "U", devnetAmount: 100n * SOL, preWhitelisted: true });
+    assert.equal(await adapter.getTreasuryBalance(), 800_000_000n);
+    assert.equal(store.getTotalWhitelisted(), 100n * SOL);
+  } finally {
+    await cleanup();
+  }
+});

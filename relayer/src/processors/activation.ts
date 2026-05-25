@@ -30,6 +30,7 @@ export class ActivationProcessor {
         feeTreasuryLamports: treasury,
         feeTeamLamports: team,
         status: "RECEIVED",
+        preWhitelisted: req.preWhitelisted ?? false,
         updatedAt: now(),
       };
       await this.store.putActivation(rec);
@@ -55,15 +56,25 @@ export class ActivationProcessor {
 
     // STEP 2 — devnet whitelist only after the fee is secured.
     if (rec.status === "FEE_COLLECTED") {
-      try {
-        const res = await this.adapter.whitelistDevnet(rec.user, rec.devnetAmount, `act:${rec.id}:wl`);
+      if (rec.preWhitelisted) {
+        // Curve-originated: the whitelist already happened on-chain in
+        // platform.program_activate (atomic with the trade). The relayer only
+        // had to collect the fee; just mirror the amount into our solvency
+        // counter and finish. (No chain write, so nothing to fail here.)
         await this.store.addWhitelisted(rec.devnetAmount);
-        rec = { ...rec, status: "WHITELISTED", devnetWhitelistSig: res.signature, error: undefined, updatedAt: now() };
+        rec = { ...rec, status: "WHITELISTED", devnetWhitelistSig: "on-chain", error: undefined, updatedAt: now() };
         await this.store.putActivation(rec);
-      } catch (e) {
-        // Fee already collected — stay at FEE_COLLECTED so retry resumes here.
-        rec = { ...rec, error: String(e), updatedAt: now() };
-        await this.store.putActivation(rec);
+      } else {
+        try {
+          const res = await this.adapter.whitelistDevnet(rec.user, rec.devnetAmount, `act:${rec.id}:wl`);
+          await this.store.addWhitelisted(rec.devnetAmount);
+          rec = { ...rec, status: "WHITELISTED", devnetWhitelistSig: res.signature, error: undefined, updatedAt: now() };
+          await this.store.putActivation(rec);
+        } catch (e) {
+          // Fee already collected — stay at FEE_COLLECTED so retry resumes here.
+          rec = { ...rec, error: String(e), updatedAt: now() };
+          await this.store.putActivation(rec);
+        }
       }
     }
 
