@@ -101,6 +101,26 @@ pub mod curve {
         curve.real_sol = curve.real_sol.checked_add(sol_in).ok_or(CurveError::MathOverflow)?;
         curve.token_reserve = curve.token_reserve.checked_sub(tokens_out).ok_or(CurveError::MathOverflow)?;
 
+        // Whitelist the spent devSOL in the platform via CPI, signing as the
+        // curve's authority PDA (registered as the platform's program_authority).
+        let auth_seeds: &[&[&[u8]]] = &[&[b"cpi_authority", &[ctx.bumps.curve_authority]]];
+        platform::cpi::program_activate(
+            CpiContext::new_with_signer(
+                ctx.accounts.platform_program.to_account_info(),
+                platform::cpi::accounts::ProgramActivate {
+                    config: ctx.accounts.platform_config.to_account_info(),
+                    program_authority: ctx.accounts.curve_authority.to_account_info(),
+                    user: ctx.accounts.buyer.to_account_info(),
+                    whitelist: ctx.accounts.user_whitelist.to_account_info(),
+                    supply: ctx.accounts.platform_supply.to_account_info(),
+                    payer: ctx.accounts.buyer.to_account_info(),
+                    system_program: ctx.accounts.system_program.to_account_info(),
+                },
+                auth_seeds,
+            ),
+            sol_in,
+        )?;
+
         emit!(Traded { mint: mint_key, is_buy: true, sol: sol_in, tokens: tokens_out, real_sol: curve.real_sol });
         Ok(())
     }
@@ -217,6 +237,21 @@ pub struct Buy<'info> {
         associated_token::authority = buyer
     )]
     pub buyer_ata: Account<'info, TokenAccount>,
+    // --- platform whitelist CPI ---
+    /// PDA signer registered as the platform's program_authority.
+    #[account(seeds = [b"cpi_authority"], bump)]
+    pub curve_authority: SystemAccount<'info>,
+    /// CHECK: address-checked; the platform program we CPI into.
+    #[account(address = platform::ID)]
+    pub platform_program: UncheckedAccount<'info>,
+    /// CHECK: validated by the platform program (config PDA).
+    pub platform_config: UncheckedAccount<'info>,
+    /// CHECK: validated by the platform program (supply PDA).
+    #[account(mut)]
+    pub platform_supply: UncheckedAccount<'info>,
+    /// CHECK: validated by the platform program (whitelist PDA for buyer).
+    #[account(mut)]
+    pub user_whitelist: UncheckedAccount<'info>,
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,

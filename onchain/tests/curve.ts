@@ -3,20 +3,28 @@ import type { Program } from "@coral-xyz/anchor";
 import { PublicKey, Keypair, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { expect } from "chai";
 import * as fs from "fs";
+import { PLATFORM_ID, configPda, supplyPda, curveAuthority, wlPda, ensurePlatformInit, totalWhitelisted } from "./shared";
 
 const BN: typeof anchor.BN = (anchor as any).BN ?? (anchor as any).default?.BN;
 const curveIdl = JSON.parse(fs.readFileSync("target/idl/curve.json", "utf8"));
+const platformIdl = JSON.parse(fs.readFileSync("target/idl/platform.json", "utf8"));
 
 const TOKEN_PROGRAM = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const ATA_PROGRAM = new PublicKey("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL");
 
-// Integration tests for the bonding-curve AMM against a local validator.
+// Integration tests for the bonding-curve AMM against a local validator,
+// including the cross-program CPI that whitelists the buyer's SOL in the platform.
 describe("curve", () => {
   const provider = anchor.AnchorProvider.env();
   anchor.setProvider(provider);
   const program = new anchor.Program(curveIdl as anchor.Idl, provider) as Program<anchor.Idl>;
+  const platform = new anchor.Program(platformIdl as anchor.Idl, provider);
   const m = program.methods as any;
   const acct = program.account as any;
+
+  before(async () => {
+    await ensurePlatformInit(provider);
+  });
 
   const mint = Keypair.generate();
   const pid = program.programId;
@@ -53,7 +61,8 @@ describe("curve", () => {
     expect(vb.value.amount).to.equal(SUPPLY.toString());
   });
 
-  it("buys tokens: real SOL rises and the buyer receives tokens", async () => {
+  it("buys tokens and whitelists the spent SOL in the platform (CPI)", async () => {
+    const before = await totalWhitelisted(provider);
     await m
       .buy(new BN(LAMPORTS_PER_SOL), new BN(0))
       .accountsPartial({
@@ -62,6 +71,11 @@ describe("curve", () => {
         curve,
         vault,
         buyerAta: myAta,
+        curveAuthority,
+        platformProgram: PLATFORM_ID,
+        platformConfig: configPda,
+        platformSupply: supplyPda,
+        userWhitelist: wlPda(me),
         tokenProgram: TOKEN_PROGRAM,
         associatedTokenProgram: ATA_PROGRAM,
         systemProgram: SystemProgram.programId,
@@ -69,8 +83,10 @@ describe("curve", () => {
       .rpc();
     const c = await acct.bondingCurve.fetch(curve);
     expect(c.realSol.toNumber()).to.equal(LAMPORTS_PER_SOL);
-    const bal = await provider.connection.getTokenAccountBalance(myAta);
-    expect(Number(bal.value.amount)).to.be.greaterThan(0);
+    expect(Number((await provider.connection.getTokenAccountBalance(myAta)).value.amount)).to.be.greaterThan(0);
+    // The CPI whitelisted exactly the SOL spent.
+    expect((await (platform.account as any).whitelistBalance.fetch(wlPda(me))).amount.toNumber()).to.equal(LAMPORTS_PER_SOL);
+    expect((await totalWhitelisted(provider)) - before).to.equal(LAMPORTS_PER_SOL);
   });
 
   it("rejects graduation below the threshold", async () => {

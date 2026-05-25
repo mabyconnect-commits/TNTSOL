@@ -13,10 +13,12 @@ pub mod platform {
     pub fn initialize(
         ctx: Context<Initialize>,
         whitelist_authority: Pubkey,
+        program_authority: Pubkey,
         require_fee_proof: bool,
     ) -> Result<()> {
         let cfg = &mut ctx.accounts.config;
         cfg.whitelist_authority = whitelist_authority;
+        cfg.program_authority = program_authority;
         cfg.require_fee_proof = require_fee_proof;
         cfg.bump = ctx.bumps.config;
 
@@ -96,6 +98,35 @@ pub mod platform {
         });
         Ok(())
     }
+
+    // Program-driven activation: an authorized sibling program (the bonding-curve
+    // AMM) whitelists a user's devSOL via CPI, signing as `program_authority`.
+    // Unlike `grant_whitelist` (relayer path, receipt-idempotent), the caller's
+    // own trade is the on-chain record, so no per-activation receipt is needed.
+    pub fn program_activate(ctx: Context<ProgramActivate>, amount: u64) -> Result<()> {
+        require!(amount > 0, PlatformError::ZeroAmount);
+
+        let wl = &mut ctx.accounts.whitelist;
+        if wl.user == Pubkey::default() {
+            wl.user = ctx.accounts.user.key();
+            wl.bump = ctx.bumps.whitelist;
+        }
+        wl.amount = wl.amount.checked_add(amount).ok_or(PlatformError::Overflow)?;
+
+        let supply = &mut ctx.accounts.supply;
+        supply.total_whitelisted = supply
+            .total_whitelisted
+            .checked_add(amount)
+            .ok_or(PlatformError::Overflow)?;
+        supply.last_update_slot = Clock::get()?.slot;
+
+        emit!(WhitelistGranted {
+            user: wl.user,
+            amount,
+            total_whitelisted: supply.total_whitelisted,
+        });
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -160,10 +191,33 @@ pub struct BurnForRedemption<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[derive(Accounts)]
+pub struct ProgramActivate<'info> {
+    #[account(seeds = [b"config"], bump = config.bump, has_one = program_authority @ PlatformError::Unauthorized)]
+    pub config: Account<'info, Config>,
+    pub program_authority: Signer<'info>,
+    /// CHECK: only used as a key and as a PDA seed for the whitelist balance.
+    pub user: UncheckedAccount<'info>,
+    #[account(
+        init_if_needed,
+        payer = payer,
+        space = 8 + WhitelistBalance::INIT_SPACE,
+        seeds = [b"wl", user.key().as_ref()],
+        bump
+    )]
+    pub whitelist: Account<'info, WhitelistBalance>,
+    #[account(mut, seeds = [b"supply"], bump = supply.bump)]
+    pub supply: Account<'info, SupplyState>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
 #[account]
 #[derive(InitSpace)]
 pub struct Config {
     pub whitelist_authority: Pubkey,
+    pub program_authority: Pubkey,
     pub require_fee_proof: bool,
     pub bump: u8,
 }

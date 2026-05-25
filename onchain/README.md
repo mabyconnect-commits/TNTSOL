@@ -1,14 +1,19 @@
 # TNTSOL on-chain programs
 
 Anchor workspace implementing the design in
-[`../relayer/ONCHAIN_SPEC.md`](../relayer/ONCHAIN_SPEC.md). Two programs:
+[`../relayer/ONCHAIN_SPEC.md`](../relayer/ONCHAIN_SPEC.md). Three programs:
 
 - **`platform`** (devnet) — whitelist authority + `total_whitelisted` aggregate;
-  `grant_whitelist` (I1), `burn_for_redemption` (I2).
+  `grant_whitelist` (I1), `burn_for_redemption` (I2), and `program_activate`
+  (whitelist via CPI from an authorized sibling program — see `curve`).
 - **`treasury`** (mainnet) — reserve vault, `collect_activation_fee`, and the
   authoritative D1 (per-payout + windowed rate caps) and D2 (solvency vs. the
   attested supply snapshot) gate in `pay_redemption`; plus `post_supply_snapshot`
   (R1 attestation) and `withdraw_surplus`.
+- **`curve`** (devnet) — bonding-curve AMM (`launch`/`buy`/`sell`/`graduate`,
+  constant product). `buy` CPIs into `platform.program_activate` (signing as a
+  curve-owned PDA registered as the platform's `program_authority`) to whitelist
+  the spent devSOL.
 
 ## Status
 
