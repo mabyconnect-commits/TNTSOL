@@ -1005,3 +1005,27 @@ textarea.input { resize: vertical; min-height: 90px; font-family: var(--font-dis
 @media (max-width: 860px) {
   .toast-wrap { top: 64px; right: 14px; left: 14px; width: auto; }
 }
+
+/* ============================================================ admin / graduation / social */
+.admin-field { display: grid; grid-template-columns: 200px 170px 1fr; gap: 14px; align-items: center; }
+.admin-field label { font-family: var(--font-display); font-size: 13px; color: var(--bone); font-weight: 500; }
+.admin-field .input { margin: 0; }
+.admin-unit { font-family: var(--font-mono); font-size: 12px; color: var(--concrete); }
+
+.grad-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.grad-row { display: grid; grid-template-columns: minmax(0, 1.7fr) auto auto auto; gap: 12px; align-items: center; padding: 13px 16px; border-bottom: 1px solid var(--ash); background: var(--soot); }
+.grad-row:last-child { border-bottom: 0; }
+.grad-row .who { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.grad-row .who .addr { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grad-row .who .av { width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0; font-size: 13px; }
+
+@media (max-width: 860px) {
+  .grad-grid { grid-template-columns: minmax(0, 1fr); }
+  .admin-field { grid-template-columns: minmax(0, 1fr); gap: 6px; }
+  .admin-unit { margin-bottom: 4px; }
+  .grad-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .grad-row .who { flex: 1 1 100%; }
+}
+
+a.side-item { text-decoration: none; }

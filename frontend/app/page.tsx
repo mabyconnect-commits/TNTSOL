@@ -8,17 +8,20 @@ function Sidebar() {
       <div className="side-item active"><span>🔥</span><span className="lbl">Live floor</span><span className="ct">1,284</span></div>
       <div className="side-item"><span>⚡</span><span className="lbl">Sparks · 1h</span><span className="ct">312</span></div>
       <div className="side-item"><span>📈</span><span className="lbl">Climbing</span><span className="ct">48</span></div>
-      <div className="side-item"><span>🎓</span><span className="lbl">Graduating</span><span className="ct">7</span></div>
+      <Link href="/graduation" className="side-item"><span>🎓</span><span className="lbl">Graduating</span><span className="ct">7</span></Link>
       <div className="side-item"><span>💀</span><span className="lbl">Dust</span><span className="ct">9.2k</span></div>
 
       <div className="side-h">YOUR BAGS</div>
-      <div className="side-item"><span>💼</span><span className="lbl">Holdings</span><span className="ct">12</span></div>
+      <Link href="/portfolio" className="side-item"><span>💼</span><span className="lbl">Holdings</span><span className="ct">12</span></Link>
       <div className="side-item"><span>👀</span><span className="lbl">Watchlist</span><span className="ct">23</span></div>
       <div className="side-item"><span>🚀</span><span className="lbl">Launched</span><span className="ct">2</span></div>
 
       <div className="side-h">SOCIAL</div>
-      <div className="side-item"><span>🧬</span><span className="lbl">Crew picks</span><span className="ct">18</span></div>
-      <div className="side-item"><span>🐋</span><span className="lbl">Whale flow</span></div>
+      <Link href="/social" className="side-item"><span>🧬</span><span className="lbl">Crew picks</span><span className="ct">18</span></Link>
+      <Link href="/social" className="side-item"><span>🐋</span><span className="lbl">Whale flow</span></Link>
+
+      <div className="side-h">PLATFORM</div>
+      <Link href="/admin" className="side-item"><span>🛠️</span><span className="lbl">Admin</span></Link>
 
       <div className="feed-stats">
         <div className="r"><span>Floor TVL</span><b>4,812 devSOL</b></div>

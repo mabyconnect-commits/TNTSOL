@@ -11,6 +11,7 @@ const TABS = [
   { href: "/portfolio", label: "Portfolio", badge: "3" },
   { href: "/launch", label: "Light the fuse" },
   { href: "/redeem", label: "Redeem" },
+  { href: "/social", label: "Social" },
 ];
 
 function isActive(pathname: string, href: string) {
