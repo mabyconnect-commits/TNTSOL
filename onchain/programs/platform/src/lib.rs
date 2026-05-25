@@ -14,11 +14,13 @@ pub mod platform {
         ctx: Context<Initialize>,
         whitelist_authority: Pubkey,
         program_authority: Pubkey,
+        activation_fee_bps: u16,
         require_fee_proof: bool,
     ) -> Result<()> {
         let cfg = &mut ctx.accounts.config;
         cfg.whitelist_authority = whitelist_authority;
         cfg.program_authority = program_authority;
+        cfg.activation_fee_bps = activation_fee_bps;
         cfg.require_fee_proof = require_fee_proof;
         cfg.bump = ctx.bumps.config;
 
@@ -43,7 +45,7 @@ pub mod platform {
             wl.user = ctx.accounts.user.key();
             wl.bump = ctx.bumps.whitelist;
         }
-        wl.amount = wl.amount.checked_add(amount).ok_or(PlatformError::Overflow)?;
+        wl.whitelisted = wl.whitelisted.checked_add(amount).ok_or(PlatformError::Overflow)?;
 
         let supply = &mut ctx.accounts.supply;
         supply.total_whitelisted = supply
@@ -72,8 +74,8 @@ pub mod platform {
         require!(amount > 0, PlatformError::ZeroAmount);
 
         let wl = &mut ctx.accounts.whitelist;
-        require!(wl.amount >= amount, PlatformError::InsufficientWhitelist);
-        wl.amount -= amount;
+        require!(wl.whitelisted >= amount, PlatformError::InsufficientWhitelist);
+        wl.whitelisted -= amount;
 
         let supply = &mut ctx.accounts.supply;
         supply.total_whitelisted = supply
@@ -99,31 +101,57 @@ pub mod platform {
         Ok(())
     }
 
-    // Program-driven activation: an authorized sibling program (the bonding-curve
-    // AMM) whitelists a user's devSOL via CPI, signing as `program_authority`.
-    // Unlike `grant_whitelist` (relayer path, receipt-idempotent), the caller's
-    // own trade is the on-chain record, so no per-activation receipt is needed.
-    pub fn program_activate(ctx: Context<ProgramActivate>, amount: u64) -> Result<()> {
+    // Records freely-obtained devSOL (faucet / P2P) into the caller's blacklisted
+    // bucket. Self-served stand-in for the deposit/transfer-hook inflow.
+    pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         require!(amount > 0, PlatformError::ZeroAmount);
+        let wl = &mut ctx.accounts.whitelist;
+        if wl.user == Pubkey::default() {
+            wl.user = ctx.accounts.user.key();
+            wl.bump = ctx.bumps.whitelist;
+        }
+        wl.blacklisted = wl.blacklisted.checked_add(amount).ok_or(PlatformError::Overflow)?;
+        Ok(())
+    }
+
+    // Program-driven activation: an authorized sibling program (the bonding-curve
+    // AMM) reports a trade of `trade_amount` devSOL via CPI, signing as
+    // `program_authority`. The user's whitelisted devSOL covers the trade fee-free;
+    // only the remainder pulled from the blacklisted bucket is activated (moved to
+    // whitelisted, counted into total_whitelisted) and owes the 1% activation fee.
+    // The fee is paid in mainnet SOL by the relayer (cross-network), so it's
+    // emitted here as `fee_owed_mainnet` rather than charged on-chain.
+    pub fn program_activate(ctx: Context<ProgramActivate>, trade_amount: u64) -> Result<()> {
+        require!(trade_amount > 0, PlatformError::ZeroAmount);
+        let fee_bps = ctx.accounts.config.activation_fee_bps as u128;
 
         let wl = &mut ctx.accounts.whitelist;
         if wl.user == Pubkey::default() {
             wl.user = ctx.accounts.user.key();
             wl.bump = ctx.bumps.whitelist;
         }
-        wl.amount = wl.amount.checked_add(amount).ok_or(PlatformError::Overflow)?;
+        let from_blacklist = trade_amount.saturating_sub(wl.whitelisted);
+        require!(from_blacklist <= wl.blacklisted, PlatformError::InsufficientFunds);
+        wl.blacklisted -= from_blacklist;
+        wl.whitelisted = wl.whitelisted.checked_add(from_blacklist).ok_or(PlatformError::Overflow)?;
+        let user = wl.user;
 
         let supply = &mut ctx.accounts.supply;
         supply.total_whitelisted = supply
             .total_whitelisted
-            .checked_add(amount)
+            .checked_add(from_blacklist)
             .ok_or(PlatformError::Overflow)?;
         supply.last_update_slot = Clock::get()?.slot;
+        let total = supply.total_whitelisted;
 
-        emit!(WhitelistGranted {
-            user: wl.user,
-            amount,
-            total_whitelisted: supply.total_whitelisted,
+        let fee_owed = ((from_blacklist as u128).checked_mul(fee_bps).ok_or(PlatformError::Overflow)? / 10_000) as u64;
+
+        emit!(Activated {
+            user,
+            trade_amount,
+            activated: from_blacklist,
+            fee_owed_mainnet: fee_owed,
+            total_whitelisted: total,
         });
         Ok(())
     }
@@ -192,6 +220,21 @@ pub struct BurnForRedemption<'info> {
 }
 
 #[derive(Accounts)]
+pub struct Deposit<'info> {
+    #[account(
+        init_if_needed,
+        payer = user,
+        space = 8 + WhitelistBalance::INIT_SPACE,
+        seeds = [b"wl", user.key().as_ref()],
+        bump
+    )]
+    pub whitelist: Account<'info, WhitelistBalance>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
 pub struct ProgramActivate<'info> {
     #[account(seeds = [b"config"], bump = config.bump, has_one = program_authority @ PlatformError::Unauthorized)]
     pub config: Account<'info, Config>,
@@ -218,6 +261,7 @@ pub struct ProgramActivate<'info> {
 pub struct Config {
     pub whitelist_authority: Pubkey,
     pub program_authority: Pubkey,
+    pub activation_fee_bps: u16,
     pub require_fee_proof: bool,
     pub bump: u8,
 }
@@ -234,7 +278,8 @@ pub struct SupplyState {
 #[derive(InitSpace)]
 pub struct WhitelistBalance {
     pub user: Pubkey,
-    pub amount: u64,
+    pub whitelisted: u64,
+    pub blacklisted: u64,
     pub bump: u8,
 }
 
@@ -267,6 +312,15 @@ pub struct WhitelistGranted {
 }
 
 #[event]
+pub struct Activated {
+    pub user: Pubkey,
+    pub trade_amount: u64,
+    pub activated: u64,
+    pub fee_owed_mainnet: u64,
+    pub total_whitelisted: u64,
+}
+
+#[event]
 pub struct BurnedForRedemption {
     pub redemption_id: String,
     pub user: Pubkey,
@@ -284,4 +338,6 @@ pub enum PlatformError {
     Unauthorized,
     #[msg("insufficient whitelist balance")]
     InsufficientWhitelist,
+    #[msg("insufficient funds: trade exceeds whitelisted + blacklisted balance")]
+    InsufficientFunds,
 }

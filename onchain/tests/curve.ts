@@ -61,32 +61,47 @@ describe("curve", () => {
     expect(vb.value.amount).to.equal(SUPPLY.toString());
   });
 
-  it("buys tokens and whitelists the spent SOL in the platform (CPI)", async () => {
-    const before = await totalWhitelisted(provider);
-    await m
-      .buy(new BN(LAMPORTS_PER_SOL), new BN(0))
-      .accountsPartial({
-        buyer: me,
-        mint: mint.publicKey,
-        curve,
-        vault,
-        buyerAta: myAta,
-        curveAuthority,
-        platformProgram: PLATFORM_ID,
-        platformConfig: configPda,
-        platformSupply: supplyPda,
-        userWhitelist: wlPda(me),
-        tokenProgram: TOKEN_PROGRAM,
-        associatedTokenProgram: ATA_PROGRAM,
-        systemProgram: SystemProgram.programId,
-      })
+  const buyAccounts = {
+    buyer: me,
+    mint: mint.publicKey,
+    curve,
+    vault,
+    buyerAta: myAta,
+    curveAuthority,
+    platformProgram: PLATFORM_ID,
+    platformConfig: configPda,
+    platformSupply: supplyPda,
+    userWhitelist: wlPda(me),
+    tokenProgram: TOKEN_PROGRAM,
+    associatedTokenProgram: ATA_PROGRAM,
+    systemProgram: SystemProgram.programId,
+  };
+
+  it("buy from the blacklisted bucket activates it via CPI (fee owed)", async () => {
+    // Fund the buyer's blacklisted bucket (faucet-origin devSOL), then buy.
+    await (platform.methods as any)
+      .deposit(new BN(LAMPORTS_PER_SOL))
+      .accountsPartial({ whitelist: wlPda(me), user: me, systemProgram: SystemProgram.programId })
       .rpc();
-    const c = await acct.bondingCurve.fetch(curve);
-    expect(c.realSol.toNumber()).to.equal(LAMPORTS_PER_SOL);
+
+    const before = await totalWhitelisted(provider);
+    await m.buy(new BN(LAMPORTS_PER_SOL), new BN(0)).accountsPartial(buyAccounts).rpc();
+
+    expect((await acct.bondingCurve.fetch(curve)).realSol.toNumber()).to.equal(LAMPORTS_PER_SOL);
     expect(Number((await provider.connection.getTokenAccountBalance(myAta)).value.amount)).to.be.greaterThan(0);
-    // The CPI whitelisted exactly the SOL spent.
-    expect((await (platform.account as any).whitelistBalance.fetch(wlPda(me))).amount.toNumber()).to.equal(LAMPORTS_PER_SOL);
+    // The blacklisted SOL was activated: moved to whitelisted, counted in supply.
+    const b = await (platform.account as any).whitelistBalance.fetch(wlPda(me));
+    expect(b.whitelisted.toNumber()).to.equal(LAMPORTS_PER_SOL);
+    expect(b.blacklisted.toNumber()).to.equal(0);
     expect((await totalWhitelisted(provider)) - before).to.equal(LAMPORTS_PER_SOL);
+  });
+
+  it("buy covered by whitelisted balance is fee-free (no new activation)", async () => {
+    const before = await totalWhitelisted(provider);
+    await m.buy(new BN(LAMPORTS_PER_SOL / 2), new BN(0)).accountsPartial(buyAccounts).rpc();
+    // Trade is within the whitelisted balance, so nothing new is activated.
+    expect((await totalWhitelisted(provider)) - before).to.equal(0);
+    expect((await (platform.account as any).whitelistBalance.fetch(wlPda(me))).whitelisted.toNumber()).to.equal(LAMPORTS_PER_SOL);
   });
 
   it("rejects graduation below the threshold", async () => {

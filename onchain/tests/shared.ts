@@ -26,7 +26,7 @@ export async function ensurePlatformInit(provider: anchor.AnchorProvider) {
   const program = new anchor.Program(platformIdl as anchor.Idl, provider);
   try {
     await (program.methods as any)
-      .initialize(whitelistAuthority.publicKey, curveAuthority, false)
+      .initialize(whitelistAuthority.publicKey, curveAuthority, 100, false)
       .accountsPartial({ config: configPda, supply: supplyPda, payer: provider.wallet.publicKey, systemProgram: SystemProgram.programId })
       .rpc();
   } catch {

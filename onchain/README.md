@@ -3,9 +3,13 @@
 Anchor workspace implementing the design in
 [`../relayer/ONCHAIN_SPEC.md`](../relayer/ONCHAIN_SPEC.md). Three programs:
 
-- **`platform`** (devnet) — whitelist authority + `total_whitelisted` aggregate;
-  `grant_whitelist` (I1), `burn_for_redemption` (I2), and `program_activate`
-  (whitelist via CPI from an authorized sibling program — see `curve`).
+- **`platform`** (devnet) — per-user whitelisted/blacklisted buckets +
+  `total_whitelisted` aggregate. `deposit` (records faucet/P2P devSOL as
+  blacklisted), `grant_whitelist` (I1, relayer), `burn_for_redemption` (I2), and
+  `program_activate` — a trade reported via CPI (see `curve`) where the user's
+  whitelisted balance covers it fee-free and only the blacklisted excess is
+  activated, emitting the 1% mainnet `fee_owed` for the relayer to collect
+  (the fee is cross-network, so it isn't charged on-chain).
 - **`treasury`** (mainnet) — reserve vault, `collect_activation_fee`, and the
   authoritative D1 (per-payout + windowed rate caps) and D2 (solvency vs. the
   attested supply snapshot) gate in `pay_redemption`; plus `post_supply_snapshot`

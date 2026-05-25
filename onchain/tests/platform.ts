@@ -41,7 +41,7 @@ describe("platform", () => {
       .accountsPartial({ config: configPda, whitelistAuthority: authority.publicKey, user: user.publicKey, whitelist: wl, supply: supplyPda, grantReceipt: grant("act-1"), payer: provider.wallet.publicKey, systemProgram: SystemProgram.programId })
       .signers([authority])
       .rpc();
-    expect((await acct.whitelistBalance.fetch(wl)).amount.toNumber()).to.equal(1000);
+    expect((await acct.whitelistBalance.fetch(wl)).whitelisted.toNumber()).to.equal(1000);
     expect((await totalWhitelisted(provider)) - before).to.equal(1000);
   });
 
@@ -81,8 +81,23 @@ describe("platform", () => {
       .accountsPartial({ whitelist: wl, supply: supplyPda, receipt: burn("red-1"), user: user.publicKey, systemProgram: SystemProgram.programId })
       .signers([user])
       .rpc();
-    expect((await acct.whitelistBalance.fetch(wl)).amount.toNumber()).to.equal(600);
+    expect((await acct.whitelistBalance.fetch(wl)).whitelisted.toNumber()).to.equal(600);
     expect(before - (await totalWhitelisted(provider))).to.equal(400);
+  });
+
+  it("deposit adds to the blacklisted bucket", async () => {
+    const d = Keypair.generate();
+    const sig = await provider.connection.requestAirdrop(d.publicKey, LAMPORTS_PER_SOL);
+    await provider.connection.confirmTransaction(sig, "confirmed");
+    const dWl = wlPda(d.publicKey);
+    await m
+      .deposit(new BN(5000))
+      .accountsPartial({ whitelist: dWl, user: d.publicKey, systemProgram: SystemProgram.programId })
+      .signers([d])
+      .rpc();
+    const b = await acct.whitelistBalance.fetch(dWl);
+    expect(b.blacklisted.toNumber()).to.equal(5000);
+    expect(b.whitelisted.toNumber()).to.equal(0);
   });
 
   it("rejects a burn over the whitelist balance", async () => {
