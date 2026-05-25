@@ -8,9 +8,11 @@ skip-lint = false
 [programs.localnet]
 platform = "E2DwHR9UdVgcdAZ4TpkjUY65x8s5qJ6TLHDh1n8gChAo"
 treasury = "Ccucx2681CT5JhV181myXGx1ZVh7n4nrFb83njNEmaZj"
+curve = "kGRq3nZ4HWAopZM9fFvYpJqNXw3xZ16cXfAXsw7gfw4"
 
 [programs.devnet]
 platform = "E2DwHR9UdVgcdAZ4TpkjUY65x8s5qJ6TLHDh1n8gChAo"
+curve = "kGRq3nZ4HWAopZM9fFvYpJqNXw3xZ16cXfAXsw7gfw4"
 
 [programs.mainnet]
 treasury = "Ccucx2681CT5JhV181myXGx1ZVh7n4nrFb83njNEmaZj"
