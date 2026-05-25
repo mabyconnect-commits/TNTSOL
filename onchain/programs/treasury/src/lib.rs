@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("Ccucx2681CT5JhV181myXGx1ZVh7n4nrFb83njNEmaZj");
 
 const BPS_DENOM: u128 = 10_000;
 

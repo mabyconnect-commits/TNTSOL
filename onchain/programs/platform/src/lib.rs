@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnT");
+declare_id!("E2DwHR9UdVgcdAZ4TpkjUY65x8s5qJ6TLHDh1n8gChAo");
 
 // Devnet platform program. Source of truth for `total_whitelisted`: grants
 // whitelist on activation (I1) and burns on redemption (I2). The burn receipt

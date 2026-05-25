@@ -55,4 +55,18 @@ if ! "$ANCHOR_BIN_DIR/anchor" --version 2>/dev/null | grep -q "$ANCHOR_VER"; the
 fi
 add_path "$ANCHOR_BIN_DIR" # last add_path wins precedence over any cargo/avm shim
 
-echo "[hook] done. solana=$("$SOLANA_HOME/bin/solana" --version 2>/dev/null || echo missing) anchor=$(anchor --version 2>/dev/null || echo pending)"
+# --- SBF platform-tools (needed by `anchor build` / cargo-build-sbf). Its Rust
+# downloader trips the proxy's TLS interception (UnknownIssuer), so fetch the
+# release tarball via curl (which trusts the proxy CA) and unpack it into the
+# cache path cargo-build-sbf looks for. ~500MB, one-time (persists in cache). ---
+PT_VER="v1.53"
+PT_DIR="$HOME/.cache/solana/$PT_VER/platform-tools"
+if [ ! -d "$PT_DIR/rust" ]; then
+  echo "[hook] installing SBF platform-tools $PT_VER (large, one-time)..."
+  mkdir -p "$PT_DIR"
+  curl -sSfL -o /tmp/platform-tools.tar.bz2 \
+    "https://github.com/anza-xyz/platform-tools/releases/download/$PT_VER/platform-tools-linux-x86_64.tar.bz2" \
+    && tar -xjf /tmp/platform-tools.tar.bz2 -C "$PT_DIR" && rm -f /tmp/platform-tools.tar.bz2
+fi
+
+echo "[hook] done. solana=$("$SOLANA_HOME/bin/solana" --version 2>/dev/null || echo missing) anchor=$(anchor --version 2>/dev/null || echo pending) sbf-tools=$([ -d "$PT_DIR/rust" ] && echo ok || echo pending)"

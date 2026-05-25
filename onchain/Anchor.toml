@@ -5,10 +5,8 @@ anchor_version = "0.32.1"
 resolution = true
 skip-lint = false
 
-# Placeholder program IDs. Run `anchor keys sync` after the first `anchor build`
-# to replace these with the locally generated program keypairs.
 [programs.devnet]
-platform = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnT"
+platform = "E2DwHR9UdVgcdAZ4TpkjUY65x8s5qJ6TLHDh1n8gChAo"
 
 [programs.mainnet]
 treasury = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
