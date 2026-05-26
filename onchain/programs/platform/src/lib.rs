@@ -175,6 +175,20 @@ pub mod platform {
         emit!(WhitelistGranted { user, amount, total_whitelisted: total });
         Ok(())
     }
+
+    // The reserve's escape hatch: if the mainnet fee for a pending activation
+    // can't be collected, the relayer returns the reserved amount from `pending`
+    // back to `blacklisted` (un-activated) rather than leaving it stuck. Never
+    // touches whitelisted/total_whitelisted.
+    pub fn cancel_activation(ctx: Context<CancelActivation>, amount: u64) -> Result<()> {
+        require!(amount > 0, PlatformError::ZeroAmount);
+        let wl = &mut ctx.accounts.whitelist;
+        require!(wl.pending >= amount, PlatformError::InsufficientPending);
+        wl.pending -= amount;
+        wl.blacklisted = wl.blacklisted.checked_add(amount).ok_or(PlatformError::Overflow)?;
+        emit!(ActivationCancelled { user: wl.user, amount });
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -301,6 +315,17 @@ pub struct FinalizeActivation<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[derive(Accounts)]
+pub struct CancelActivation<'info> {
+    #[account(seeds = [b"config"], bump = config.bump, has_one = whitelist_authority @ PlatformError::Unauthorized)]
+    pub config: Account<'info, Config>,
+    pub whitelist_authority: Signer<'info>,
+    /// CHECK: only used as a key and as a PDA seed for the whitelist balance.
+    pub user: UncheckedAccount<'info>,
+    #[account(mut, seeds = [b"wl", user.key().as_ref()], bump = whitelist.bump)]
+    pub whitelist: Account<'info, WhitelistBalance>,
+}
+
 #[account]
 #[derive(InitSpace)]
 pub struct Config {
@@ -363,6 +388,12 @@ pub struct ActivationPending {
     pub trade_amount: u64,
     pub activated: u64,
     pub fee_owed_mainnet: u64,
+}
+
+#[event]
+pub struct ActivationCancelled {
+    pub user: Pubkey,
+    pub amount: u64,
 }
 
 #[event]

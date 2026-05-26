@@ -13,6 +13,8 @@ Anchor workspace implementing the design in
     solvency liability before the fee is paid.
   - `finalize_activation` (relayer, after collecting the mainnet fee) — moves the
     amount `pending → whitelisted` and into `total_whitelisted` (receipt-idempotent).
+  - `cancel_activation` (relayer, if the fee is uncollectable) — returns the
+    amount `pending → blacklisted`, so a reservation is never stuck.
   This keeps the fee-first invariant across the devnet/mainnet split: an
   uncollectable fee can never leave a user whitelisted-but-unpaid.
 - **`treasury`** (mainnet) — reserve vault, `collect_activation_fee`, and the

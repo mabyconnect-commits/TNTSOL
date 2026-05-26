@@ -161,4 +161,46 @@ describe("curve", () => {
     expect(c.tokenReserve.toString()).to.equal(SUPPLY.toString());
     expect(c.realSol.toNumber()).to.be.at.most(LAMPORTS_PER_SOL);
   });
+
+  it("reserve can be cancelled back to blacklisted (uncollectable fee)", async () => {
+    // Fresh token + fresh buyer, isolated from the suite's shared `me` state.
+    const mint2 = Keypair.generate();
+    const curve2 = PublicKey.findProgramAddressSync([Buffer.from("curve"), mint2.publicKey.toBuffer()], pid)[0];
+    const ataOf = (owner: PublicKey, mintPk: PublicKey) =>
+      PublicKey.findProgramAddressSync([owner.toBuffer(), TOKEN_PROGRAM.toBuffer(), mintPk.toBuffer()], ATA_PROGRAM)[0];
+    const vault2 = ataOf(curve2, mint2.publicKey);
+    const buyer = Keypair.generate();
+    const sig = await provider.connection.requestAirdrop(buyer.publicKey, 5 * LAMPORTS_PER_SOL);
+    await provider.connection.confirmTransaction(sig, "confirmed");
+
+    await m
+      .launch(VSOL, SUPPLY, THRESH)
+      .accountsPartial({ creator: me, mint: mint2.publicKey, curve: curve2, vault: vault2, tokenProgram: TOKEN_PROGRAM, associatedTokenProgram: ATA_PROGRAM, systemProgram: SystemProgram.programId, rent: anchor.web3.SYSVAR_RENT_PUBKEY })
+      .signers([mint2])
+      .rpc();
+
+    // Fund the buyer's blacklisted bucket, then buy -> reserves into pending.
+    await (platform.methods as any)
+      .deposit(new BN(LAMPORTS_PER_SOL))
+      .accountsPartial({ whitelist: wlPda(buyer.publicKey), user: buyer.publicKey, systemProgram: SystemProgram.programId })
+      .signers([buyer])
+      .rpc();
+    await m
+      .buy(new BN(LAMPORTS_PER_SOL), new BN(0))
+      .accountsPartial({ buyer: buyer.publicKey, mint: mint2.publicKey, curve: curve2, vault: vault2, buyerAta: ataOf(buyer.publicKey, mint2.publicKey), curveAuthority, platformProgram: PLATFORM_ID, platformConfig: configPda, platformSupply: supplyPda, userWhitelist: wlPda(buyer.publicKey), tokenProgram: TOKEN_PROGRAM, associatedTokenProgram: ATA_PROGRAM, systemProgram: SystemProgram.programId })
+      .signers([buyer])
+      .rpc();
+    expect((await (platform.account as any).whitelistBalance.fetch(wlPda(buyer.publicKey))).pending.toNumber()).to.equal(LAMPORTS_PER_SOL);
+
+    // Fee uncollectable -> relayer returns the reservation to blacklisted.
+    await (platform.methods as any)
+      .cancelActivation(new BN(LAMPORTS_PER_SOL))
+      .accountsPartial({ config: configPda, whitelistAuthority: whitelistAuthority.publicKey, user: buyer.publicKey, whitelist: wlPda(buyer.publicKey) })
+      .signers([whitelistAuthority])
+      .rpc();
+    const b = await (platform.account as any).whitelistBalance.fetch(wlPda(buyer.publicKey));
+    expect(b.pending.toNumber()).to.equal(0);
+    expect(b.blacklisted.toNumber()).to.equal(LAMPORTS_PER_SOL);
+    expect(b.whitelisted.toNumber()).to.equal(0);
+  });
 });
