@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>TNTSOL — Treasury / Admin</title>
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  body { background: var(--carbon); color: var(--bone); margin: 0; }
+  .app { display: grid; grid-template-rows: 56px 1fr; min-height: 100vh; }
+
+  /* Topnav (admin variant) */
+  .topnav { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 24px; padding: 0 24px; border-bottom: 1px solid var(--ash); background: var(--soot); }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .name { font-family: var(--font-display); font-weight: 700; font-size: 18px; letter-spacing: -0.04em; }
+  .brand .name .red { color: var(--tnt-red); }
+  .brand .role { margin-left: 6px; padding: 3px 8px; border-radius: 999px; background: var(--tnt-red); color: var(--carbon); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.14em; font-weight: 700; }
+  .brand .net { margin-left: 4px; padding: 3px 8px; border-radius: 999px; background: var(--blacklist-bg); color: var(--blacklist); border: 1px solid var(--blacklist-soft); font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; }
+
+  .nav-tabs { display: flex; gap: 2px; }
+  .nav-tab { font-family: var(--font-display); font-weight: 500; font-size: 13px; color: var(--concrete); padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+  .nav-tab.active { background: var(--ash); color: var(--bone); }
+
+  .nav-right { display: flex; gap: 10px; align-items: center; }
+  .alerts { font-family: var(--font-mono); font-size: 11px; color: var(--fuse-amber); display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: var(--blacklist-bg); border: 1px solid var(--blacklist-soft); }
+  .alerts::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--fuse-amber); box-shadow: 0 0 8px var(--fuse-amber); }
+  .admin-pill { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--ash); border: 1px solid var(--gravel); font-family: var(--font-mono); font-size: 12px; color: var(--bone); }
+  .admin-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--whitelist); }
+  .admin-pill b { color: var(--bone); }
+
+  /* Body */
+  .body { padding: 28px 32px 80px; max-width: 1440px; margin: 0 auto; width: 100%; }
+
+  .head { display: flex; align-items: end; justify-content: space-between; margin-bottom: 28px; }
+  .head h1 { font-family: var(--font-display); font-weight: 700; font-size: 32px; letter-spacing: -0.025em; margin: 0; }
+  .head .sub { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); margin-top: 6px; letter-spacing: 0.04em; }
+  .head .meta { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); display: flex; gap: 24px; }
+  .head .meta b { color: var(--whitelist); }
+
+  /* Alert banner */
+  .alert {
+    border: 1px solid var(--fuse-amber);
+    background: linear-gradient(135deg, rgba(255,182,39,0.12), rgba(255,182,39,0.02));
+    border-radius: var(--r-md); padding: 16px 22px; margin-bottom: 24px;
+    display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center;
+  }
+  .alert .l { display: flex; align-items: center; gap: 16px; }
+  .alert .ic { width: 36px; height: 36px; border-radius: 8px; background: var(--blacklist-bg); border: 1px solid var(--fuse-amber); color: var(--fuse-amber); display: grid; place-items: center; font-size: 18px; }
+  .alert h3 { font-family: var(--font-display); font-weight: 600; font-size: 15px; margin: 0; }
+  .alert h3 b { color: var(--fuse-amber); }
+  .alert p { font-size: 13px; color: var(--bone); opacity: 0.78; margin: 4px 0 0; line-height: 1.5; }
+  .alert .actions { display: flex; gap: 8px; }
+
+  /* Top stat grid */
+  .top-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin-bottom: 24px;
+  }
+  .ts-card {
+    border: 1px solid var(--ash); border-radius: var(--r-md); background: var(--soot);
+    padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;
+    position: relative; overflow: hidden;
+  }
+  .ts-card.warn { border-color: var(--blacklist-soft); }
+  .ts-card.good { border-color: var(--whitelist-soft); }
+  .ts-card .k { font-family: var(--font-mono); font-size: 10px; color: var(--concrete); letter-spacing: 0.12em; text-transform: uppercase; }
+  .ts-card .v { font-family: var(--font-display); font-weight: 700; font-size: 28px; letter-spacing: -0.02em; }
+  .ts-card .v small { font-size: 13px; color: var(--concrete); font-weight: 500; font-family: var(--font-mono); margin-left: 4px; }
+  .ts-card .delta { font-family: var(--font-mono); font-size: 11px; color: var(--whitelist); }
+  .ts-card .delta.down { color: var(--tnt-red); }
+  .ts-card .delta.warn { color: var(--fuse-amber); }
+  .ts-card .spark { position: absolute; right: 12px; top: 14px; opacity: 0.6; }
+
+  /* Layout columns */
+  .cols { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; }
+
+  /* Card */
+  .card { border: 1px solid var(--ash); border-radius: var(--r-md); background: var(--soot); }
+  .card-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 22px; border-bottom: 1px solid var(--ash); }
+  .card-head h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 16px; letter-spacing: -0.01em; }
+  .card-head .ssub { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); letter-spacing: 0.06em; }
+  .card-head .filter { display: flex; gap: 2px; padding: 2px; border-radius: 6px; background: var(--carbon); border: 1px solid var(--ash); }
+  .card-head .filter button { font-family: var(--font-mono); font-size: 11px; padding: 4px 8px; border-radius: 4px; background: transparent; border: 0; color: var(--concrete); cursor: pointer; }
+  .card-head .filter button.active { background: var(--ash); color: var(--bone); }
+
+  /* Big chart */
+  .chart-area { padding: 18px 22px; height: 320px; }
+  .chart-area svg { width: 100%; height: 100%; }
+  .chart-legend { display: flex; gap: 18px; padding: 8px 22px 18px; font-family: var(--font-mono); font-size: 11px; color: var(--concrete); border-top: 1px solid var(--ash); }
+  .chart-legend i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+
+  /* Reserve ratio gauge */
+  .gauge-card { padding: 22px; display: flex; flex-direction: column; gap: 16px; align-items: center; }
+  .gauge { position: relative; width: 240px; height: 140px; }
+  .gauge svg { width: 100%; height: 100%; }
+  .gauge .center { position: absolute; bottom: 0; left: 50%; transform: translate(-50%, 0); text-align: center; }
+  .gauge .center .v { font-family: var(--font-display); font-weight: 700; font-size: 48px; letter-spacing: -0.025em; color: var(--whitelist); line-height: 1; }
+  .gauge .center .l { font-family: var(--font-mono); font-size: 10px; color: var(--concrete); letter-spacing: 0.14em; margin-top: 2px; }
+  .gauge-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+  .gauge-meta .gc { padding: 10px 14px; background: var(--carbon); border: 1px solid var(--ash); border-radius: 8px; font-family: var(--font-mono); }
+  .gauge-meta .gc .k { font-size: 10px; color: var(--concrete); letter-spacing: 0.1em; text-transform: uppercase; }
+  .gauge-meta .gc .v { font-size: 16px; font-weight: 700; margin-top: 4px; color: var(--bone); }
+
+  /* Tables (redemption queue) */
+  .table-rows { display: flex; flex-direction: column; }
+  .trow {
+    display: grid; grid-template-columns: 60px 1.6fr 1fr 1fr 1fr 100px;
+    padding: 12px 22px; gap: 12px;
+    border-bottom: 1px solid var(--ash); align-items: center;
+    font-family: var(--font-mono); font-size: 12px;
+  }
+  .trow:last-child { border-bottom: 0; }
+  .trow.head { background: var(--smoke); font-size: 10px; color: var(--concrete); letter-spacing: 0.12em; text-transform: uppercase; }
+  .trow .who { color: var(--bone); display: flex; align-items: center; gap: 10px; }
+  .trow .who .av { width: 22px; height: 22px; border-radius: 50%; background: linear-gradient(135deg, #9945FF, #14F195); flex-shrink: 0; }
+  .trow .num { font-variant-numeric: tabular-nums; }
+  .trow .num.up { color: var(--whitelist); font-weight: 700; }
+  .trow .pill { font-family: var(--font-mono); font-size: 10px; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.08em; font-weight: 600; width: max-content; }
+  .trow .pill.queued { background: var(--blacklist-bg); color: var(--blacklist); border: 1px solid var(--blacklist-soft); }
+  .trow .pill.done { background: var(--whitelist-bg); color: var(--whitelist); border: 1px solid var(--whitelist-soft); }
+  .trow .pill.processing { background: rgba(153,69,255,0.12); color: #B89AFF; border: 1px solid rgba(153,69,255,0.4); }
+  .trow .actions { display: flex; gap: 4px; justify-content: flex-end; }
+  .trow .btn-mini { font-family: var(--font-mono); font-size: 10px; padding: 5px 8px; background: var(--ash); color: var(--bone); border: 0; border-radius: 4px; cursor: pointer; letter-spacing: 0.04em; }
+  .trow .btn-mini.primary { background: var(--whitelist); color: var(--carbon); font-weight: 700; }
+  .trow .btn-mini.danger { background: var(--tnt-red); color: var(--carbon); }
+
+  /* Token launches table */
+  .launch-row {
+    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr 100px;
+    padding: 12px 22px; gap: 12px;
+    border-bottom: 1px solid var(--ash); align-items: center;
+  }
+  .launch-row:last-child { border-bottom: 0; }
+  .launch-row.head { background: var(--smoke); font-family: var(--font-mono); font-size: 10px; color: var(--concrete); letter-spacing: 0.12em; text-transform: uppercase; }
+  .launch-row .tk { display: flex; align-items: center; gap: 10px; }
+  .launch-row .tk .av { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 13px; color: var(--carbon); flex-shrink: 0; }
+  .launch-row .tk .info .nm { font-family: var(--font-display); font-weight: 600; font-size: 13px; }
+  .launch-row .tk .info .nm .sym { color: var(--concrete); margin-left: 4px; font-family: var(--font-mono); font-weight: 500; font-size: 11px; }
+  .launch-row .tk .info .meta { font-family: var(--font-mono); font-size: 10px; color: var(--concrete); margin-top: 2px; }
+  .launch-row .num { font-family: var(--font-mono); font-size: 13px; color: var(--bone); font-weight: 600; }
+  .launch-row .num.up { color: var(--whitelist); }
+  .launch-row .grad { display: flex; flex-direction: column; gap: 4px; }
+  .launch-row .grad .bar { height: 4px; background: var(--ash); border-radius: 2px; overflow: hidden; }
+  .launch-row .grad .bar .fill { height: 100%; background: linear-gradient(90deg, var(--tnt-red), var(--fuse-amber)); }
+  .launch-row .grad .meta { font-family: var(--font-mono); font-size: 10px; color: var(--concrete); }
+  .launch-row .actions { display: flex; gap: 4px; justify-content: flex-end; }
+
+  /* Activity / event log */
+  .log {
+    padding: 0 22px 22px;
+    display: flex; flex-direction: column; gap: 0;
+    font-family: var(--font-mono); font-size: 12px;
+    max-height: 320px; overflow: auto;
+  }
+  .lg-row { padding: 10px 0; border-bottom: 1px solid var(--ash); display: grid; grid-template-columns: 60px 1fr auto; gap: 14px; align-items: center; }
+  .lg-row:last-child { border-bottom: 0; }
+  .lg-row .ts { color: var(--gravel); }
+  .lg-row .ev .pill { display: inline-block; font-size: 9px; padding: 2px 5px; border-radius: 3px; margin-right: 8px; letter-spacing: 0.08em; font-weight: 700; vertical-align: middle; }
+  .lg-row .ev .pill.act { background: var(--blacklist-bg); color: var(--blacklist); }
+  .lg-row .ev .pill.red { background: var(--whitelist-bg); color: var(--whitelist); }
+  .lg-row .ev .pill.lit { background: rgba(255,45,31,0.15); color: var(--tnt-red); }
+  .lg-row .ev .pill.grd { background: rgba(153,69,255,0.15); color: #B89AFF; }
+  .lg-row .ev b { color: var(--bone); }
+  .lg-row .amt { color: var(--whitelist); font-weight: 700; }
+  .lg-row .amt.red { color: var(--tnt-red); }
+
+  /* Fee config / settings card */
+  .cfg-card { padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; }
+  .cfg-row { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; padding: 12px 14px; background: var(--carbon); border: 1px solid var(--ash); border-radius: 8px; }
+  .cfg-row .l { display: flex; flex-direction: column; gap: 2px; }
+  .cfg-row .l .k { font-family: var(--font-display); font-weight: 600; font-size: 14px; }
+  .cfg-row .l .desc { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); }
+  .cfg-row .r { display: flex; align-items: center; gap: 6px; }
+  .cfg-row .v { font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: var(--bone); padding: 6px 12px; background: var(--smoke); border: 1px solid var(--gravel); border-radius: 6px; }
+  .cfg-row .edit { font-family: var(--font-mono); font-size: 10px; color: var(--concrete); padding: 6px 8px; border-radius: 4px; background: var(--ash); border: 0; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- TOPNAV -->
+  <header class="topnav">
+    <div class="brand">
+      <svg width="22" height="30" viewBox="0 0 80 110">
+        <path d="M40 28 C 40 14, 60 14, 68 4" fill="none" stroke="#FFB627" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="68" cy="4" r="4" fill="#FFB627"/>
+        <rect x="11" y="25" width="58" height="9" rx="2" fill="#0A0908"/>
+        <rect x="11" y="33" width="58" height="68" rx="5" fill="#FF2D1F"/>
+        <text x="40" y="74" text-anchor="middle" font-family="JetBrains Mono, monospace" font-weight="700" font-size="15" fill="#FFF6E8" letter-spacing="0.05em">TNT</text>
+      </svg>
+      <span class="name">TNT<span class="red">SOL</span></span>
+      <span class="role">OPERATOR</span>
+      <span class="net">● DEVNET</span>
+    </div>
+
+    <nav class="nav-tabs">
+      <a class="nav-tab active">Overview</a>
+      <a class="nav-tab">Treasury</a>
+      <a class="nav-tab">Redemptions</a>
+      <a class="nav-tab">Launches</a>
+      <a class="nav-tab">Fees · config</a>
+      <a class="nav-tab">Audit log</a>
+    </nav>
+
+    <div class="nav-right">
+      <span class="alerts">2 ALERTS</span>
+      <span class="admin-pill"><span class="dot"></span>op.<b style="margin-left:2px;">7XnZ…q9kF</b></span>
+    </div>
+  </header>
+
+  <!-- BODY -->
+  <div class="body">
+
+    <div class="head">
+      <div>
+        <h1>Treasury · Overview</h1>
+        <div class="sub">Synced 2s ago · all systems nominal · slot 312,440,812</div>
+      </div>
+      <div class="meta">
+        <span>RESERVE <b>1,284.21 SOL</b></span>
+        <span>RATIO <b>120%</b></span>
+        <span>QUEUE <b>12 redemptions</b></span>
+      </div>
+    </div>
+
+    <!-- ALERT -->
+    <div class="alert">
+      <div class="l">
+        <div class="ic">⚠</div>
+        <div>
+          <h3>Reserve ratio drifting toward <b>110%</b> threshold</h3>
+          <p>Activations are slowing while redemptions speed up. At current rate, reserve hits the 110% buffer in ~46 min. Top-up recommended.</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn-mini" style="font-size: 12px; padding: 8px 12px; background: var(--ash); color: var(--bone); border: 0; border-radius: 6px; cursor: pointer;">View detail</button>
+        <button class="btn-mini" style="font-size: 12px; padding: 8px 12px; background: var(--fuse-amber); color: var(--carbon); border: 0; border-radius: 6px; cursor: pointer; font-weight: 700;">Top up treasury →</button>
+      </div>
+    </div>
+
+    <!-- TOP STATS -->
+    <div class="top-stats">
+      <div class="ts-card good">
+        <div class="k">Treasury reserve</div>
+        <div class="v">1,284.21<small>SOL</small></div>
+        <div class="delta">+18.4 today · +1.5%</div>
+        <svg class="spark" width="60" height="24" viewBox="0 0 60 24"><polyline points="0,18 12,14 24,16 36,8 48,10 60,4" fill="none" stroke="#14F195" stroke-width="1.5"/></svg>
+      </div>
+      <div class="ts-card good">
+        <div class="k">Reserve ratio</div>
+        <div class="v" style="color: var(--whitelist);">120<small>%</small></div>
+        <div class="delta">Over-collateralized</div>
+      </div>
+      <div class="ts-card warn">
+        <div class="k">Activated devSOL</div>
+        <div class="v">12,840<small>devSOL</small></div>
+        <div class="delta warn">+318 / hr · trending</div>
+        <svg class="spark" width="60" height="24" viewBox="0 0 60 24"><polyline points="0,20 12,16 24,18 36,10 48,12 60,2" fill="none" stroke="#FFB627" stroke-width="1.5"/></svg>
+      </div>
+      <div class="ts-card">
+        <div class="k">Redemptions · 24h</div>
+        <div class="v">38</div>
+        <div class="delta">184 SOL out · +12 vs 24h ago</div>
+      </div>
+    </div>
+
+    <!-- MAIN COLS -->
+    <div class="cols">
+      <!-- LEFT: Big chart card -->
+      <div class="card">
+        <div class="card-head">
+          <div>
+            <h2>Treasury · Reserve vs activated</h2>
+            <div class="ssub" style="margin-top: 4px;">SOL reserve must always exceed activated devSOL × 0.8</div>
+          </div>
+          <div class="filter">
+            <button>1H</button>
+            <button>4H</button>
+            <button class="active">24H</button>
+            <button>7D</button>
+            <button>30D</button>
+            <button>ALL</button>
+          </div>
+        </div>
+        <div class="chart-area">
+          <svg viewBox="0 0 600 240" preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#14F195" stop-opacity="0.4"/><stop offset="100%" stop-color="#14F195" stop-opacity="0"/></linearGradient>
+              <linearGradient id="gb" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#FFB627" stop-opacity="0.3"/><stop offset="100%" stop-color="#FFB627" stop-opacity="0"/></linearGradient>
+            </defs>
+            <g stroke="#1A1817" stroke-width="0.5">
+              <line x1="0" y1="60" x2="600" y2="60"/>
+              <line x1="0" y1="120" x2="600" y2="120"/>
+              <line x1="0" y1="180" x2="600" y2="180"/>
+            </g>
+            <!-- Reserve area + line (green) -->
+            <path d="M 0 90 L 50 86 L 100 84 L 150 72 L 200 80 L 250 64 L 300 70 L 350 56 L 400 62 L 450 48 L 500 52 L 550 38 L 600 42 L 600 240 L 0 240 Z" fill="url(#ga)"/>
+            <path d="M 0 90 L 50 86 L 100 84 L 150 72 L 200 80 L 250 64 L 300 70 L 350 56 L 400 62 L 450 48 L 500 52 L 550 38 L 600 42" stroke="#14F195" stroke-width="2" fill="none"/>
+            <!-- Activated (amber) -->
+            <path d="M 0 140 L 50 138 L 100 132 L 150 134 L 200 122 L 250 124 L 300 118 L 350 110 L 400 108 L 450 96 L 500 90 L 550 78 L 600 72 L 600 240 L 0 240 Z" fill="url(#gb)"/>
+            <path d="M 0 140 L 50 138 L 100 132 L 150 134 L 200 122 L 250 124 L 300 118 L 350 110 L 400 108 L 450 96 L 500 90 L 550 78 L 600 72" stroke="#FFB627" stroke-width="2" fill="none"/>
+            <!-- Threshold line at 110% -->
+            <line x1="0" y1="100" x2="600" y2="100" stroke="#FF2D1F" stroke-width="0.6" stroke-dasharray="4 4"/>
+            <text x="6" y="96" font-family="JetBrains Mono, monospace" font-size="9" fill="#FF2D1F" letter-spacing="0.06em">CRITICAL · 110%</text>
+            <!-- last point -->
+            <circle cx="600" cy="42" r="3" fill="#14F195"/>
+            <circle cx="600" cy="72" r="3" fill="#FFB627"/>
+          </svg>
+        </div>
+        <div class="chart-legend">
+          <span><i style="background: #14F195;"></i>Reserve · 1,284 SOL</span>
+          <span><i style="background: #FFB627;"></i>Activated devSOL × 0.8 · 1,067 SOL eq.</span>
+          <span><i style="background: #FF2D1F;"></i>Critical threshold · 110%</span>
+        </div>
+      </div>
+
+      <!-- RIGHT: Reserve gauge -->
+      <div class="card gauge-card">
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--concrete); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: -4px;">RESERVE RATIO</div>
+        <div class="gauge">
+          <svg viewBox="0 0 240 140">
+            <!-- arc track -->
+            <path d="M 20 130 A 100 100 0 0 1 220 130" fill="none" stroke="#25221F" stroke-width="14" stroke-linecap="round"/>
+            <!-- progress (120%/200% = 60%) -->
+            <path d="M 20 130 A 100 100 0 0 1 220 130" fill="none" stroke="url(#g1)" stroke-width="14" stroke-linecap="round" stroke-dasharray="188 314" />
+            <!-- markers -->
+            <text x="20" y="148" font-family="JetBrains Mono, monospace" font-size="9" fill="#5C544D" text-anchor="middle">0%</text>
+            <text x="220" y="148" font-family="JetBrains Mono, monospace" font-size="9" fill="#5C544D" text-anchor="middle">200%</text>
+            <text x="120" y="148" font-family="JetBrains Mono, monospace" font-size="9" fill="#FF2D1F" text-anchor="middle">100% · MIN</text>
+            <defs>
+              <linearGradient id="g1" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#FF2D1F"/><stop offset="50%" stop-color="#FFB627"/><stop offset="100%" stop-color="#14F195"/></linearGradient>
+            </defs>
+          </svg>
+          <div class="center">
+            <div class="v">120%</div>
+            <div class="l">HEALTHY</div>
+          </div>
+        </div>
+        <div class="gauge-meta">
+          <div class="gc"><div class="k">If ratio &lt; 110%</div><div class="v" style="color: var(--fuse-amber);">PAUSE</div></div>
+          <div class="gc"><div class="k">If ratio &lt; 100%</div><div class="v" style="color: var(--tnt-red);">FREEZE</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============================================== -->
+    <!-- TWO COL: Redemption queue + Recent launches -->
+    <!-- ============================================== -->
+    <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; margin-top: 16px;">
+      <!-- Redemption queue -->
+      <div class="card">
+        <div class="card-head">
+          <h2>Redemption queue</h2>
+          <div class="ssub">12 pending · 184 SOL total · est. 18 min to clear</div>
+        </div>
+        <div class="table-rows">
+          <div class="trow head">
+            <span>QUEUE</span><span>Wallet</span><span>devSOL</span><span>SOL out</span><span>Status</span><span></span>
+          </div>
+          <div class="trow">
+            <span class="num">#1</span>
+            <div class="who"><span class="av"></span>3Bq…n2R</div>
+            <span class="num">8.000</span>
+            <span class="num up">+6.400</span>
+            <span><span class="pill processing">⚡ PROCESSING</span></span>
+            <div class="actions"><button class="btn-mini">View</button></div>
+          </div>
+          <div class="trow">
+            <span class="num">#2</span>
+            <div class="who"><span class="av" style="background: linear-gradient(135deg,#FFB627,#FF2D1F);"></span>9zL…k8X</div>
+            <span class="num">12.412</span>
+            <span class="num up">+9.929</span>
+            <span><span class="pill queued">QUEUED</span></span>
+            <div class="actions"><button class="btn-mini primary">Settle</button></div>
+          </div>
+          <div class="trow">
+            <span class="num">#3</span>
+            <div class="who"><span class="av"></span>7XnZ…q9kF</div>
+            <span class="num">10.81</span>
+            <span class="num up">+8.648</span>
+            <span><span class="pill queued">QUEUED</span></span>
+            <div class="actions"><button class="btn-mini primary">Settle</button></div>
+          </div>
+          <div class="trow">
+            <span class="num">#4</span>
+            <div class="who"><span class="av" style="background: linear-gradient(135deg,#14F195,#9945FF);"></span>2Wd…f7K</div>
+            <span class="num">2.41</span>
+            <span class="num up">+1.928</span>
+            <span><span class="pill queued">QUEUED</span></span>
+            <div class="actions"><button class="btn-mini primary">Settle</button></div>
+          </div>
+          <div class="trow">
+            <span class="num">#5</span>
+            <div class="who"><span class="av"></span>5Hk…m2P</div>
+            <span class="num">42.0</span>
+            <span class="num up">+33.60</span>
+            <span><span class="pill queued">QUEUED · LARGE</span></span>
+            <div class="actions"><button class="btn-mini">Review</button></div>
+          </div>
+          <div class="trow">
+            <span class="num">#6</span>
+            <div class="who"><span class="av" style="background: linear-gradient(135deg,#FF5436,#FFB627);"></span>8Yr…s1T</div>
+            <span class="num">1.84</span>
+            <span class="num up">+1.472</span>
+            <span><span class="pill done">SETTLED</span></span>
+            <div class="actions"><button class="btn-mini">Receipt</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent launches -->
+      <div class="card">
+        <div class="card-head">
+          <h2>Recent launches</h2>
+          <div class="ssub">312 in 24h</div>
+        </div>
+        <div class="table-rows">
+          <div class="launch-row head">
+            <span>Token</span><span></span><span>Curve</span><span></span><span></span><span></span>
+          </div>
+          <div class="launch-row">
+            <div class="tk"><div class="av" style="background:#FF2D1F;">P</div><div class="info"><div class="nm">Pepe Det. <span class="sym">$PEPED</span></div><div class="meta">4h ago · 1,284 hold.</div></div></div>
+            <span></span>
+            <div class="grad"><div class="bar"><div class="fill" style="width: 96%;"></div></div><div class="meta">96% · 82.4/85</div></div>
+            <span></span>
+            <span></span>
+            <div class="actions"><button class="btn-mini">Audit</button></div>
+          </div>
+          <div class="launch-row">
+            <div class="tk"><div class="av" style="background:#9945FF; color:#FFF6E8;">F</div><div class="info"><div class="nm">Fuse <span class="sym">$FUSE</span></div><div class="meta">2h · 612 hold.</div></div></div>
+            <span></span>
+            <div class="grad"><div class="bar"><div class="fill" style="width: 56%;"></div></div><div class="meta">56%</div></div>
+            <span></span>
+            <span></span>
+            <div class="actions"><button class="btn-mini">Audit</button></div>
+          </div>
+          <div class="launch-row">
+            <div class="tk"><div class="av" style="background:#14F195;">B</div><div class="info"><div class="nm">Boom Town <span class="sym">$BOOM</span></div><div class="meta">14m · 89 hold.</div></div></div>
+            <span></span>
+            <div class="grad"><div class="bar"><div class="fill" style="width: 4%;"></div></div><div class="meta">4%</div></div>
+            <span></span>
+            <span></span>
+            <div class="actions"><button class="btn-mini">Audit</button></div>
+          </div>
+          <div class="launch-row">
+            <div class="tk"><div class="av" style="background:#FFB627;">D</div><div class="info"><div class="nm">Dynaverse <span class="sym">$DYN</span></div><div class="meta">3h · 2,041</div></div></div>
+            <span></span>
+            <div class="grad"><div class="bar"><div class="fill" style="width: 84%;"></div></div><div class="meta">84%</div></div>
+            <span></span>
+            <span></span>
+            <div class="actions"><button class="btn-mini">Audit</button></div>
+          </div>
+          <div class="launch-row">
+            <div class="tk"><div class="av" style="background:#5C2BB0; color:#FFF6E8;">M</div><div class="info"><div class="nm">Magma <span class="sym">$MAG</span></div><div class="meta">1h · 156</div></div></div>
+            <span></span>
+            <div class="grad"><div class="bar"><div class="fill" style="width: 10%;"></div></div><div class="meta">10%</div></div>
+            <span></span>
+            <span></span>
+            <div class="actions"><button class="btn-mini danger">Flag</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =============================== -->
+    <!-- FEE CONFIG + EVENT LOG -->
+    <!-- =============================== -->
+    <div style="display: grid; grid-template-columns: 1fr 1.6fr; gap: 16px; margin-top: 16px;">
+      <div class="card">
+        <div class="card-head">
+          <h2>Fee &amp; protocol config</h2>
+          <div class="ssub">requires 2/3 multisig</div>
+        </div>
+        <div class="cfg-card">
+          <div class="cfg-row">
+            <div class="l"><div class="k">Activation fee</div><div class="desc">Charged on first trade of each bag</div></div>
+            <div class="r"><span class="v">1.0%</span><button class="edit">EDIT</button></div>
+          </div>
+          <div class="cfg-row">
+            <div class="l"><div class="k">Redemption fee</div><div class="desc">devSOL → mainnet SOL</div></div>
+            <div class="r"><span class="v">0.8%</span><button class="edit">EDIT</button></div>
+          </div>
+          <div class="cfg-row">
+            <div class="l"><div class="k">Trade fee</div><div class="desc">All curve trades (LP gets 0.3% post-grad)</div></div>
+            <div class="r"><span class="v">0.4%</span><button class="edit">EDIT</button></div>
+          </div>
+          <div class="cfg-row">
+            <div class="l"><div class="k">Graduation threshold</div><div class="desc">Curve mcap to migrate LP</div></div>
+            <div class="r"><span class="v">85 devSOL</span><button class="edit">EDIT</button></div>
+          </div>
+          <div class="cfg-row">
+            <div class="l"><div class="k">Treasury split</div><div class="desc">Reserve / operators</div></div>
+            <div class="r"><span class="v">80 / 20</span><button class="edit">EDIT</button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>● Audit log</h2>
+          <div class="ssub">live · last 24 events</div>
+        </div>
+        <div class="log">
+          <div class="lg-row"><span class="ts">14:42:08</span><span class="ev"><span class="pill grd">GRAD</span> <b>$DYN</b> graduated · curve closed at 85.00 devSOL · LP seeded with 170k tokens</span><span class="amt">+85 SOL</span></div>
+          <div class="lg-row"><span class="ts">14:41:54</span><span class="ev"><span class="pill red">REDEEM</span> 9zL…k8X cashed out 12.412 devSOL</span><span class="amt">+9.929 SOL</span></div>
+          <div class="lg-row"><span class="ts">14:41:32</span><span class="ev"><span class="pill act">ACTIV</span> 5Bq…n2R activated 2.41 devSOL · 1% fee</span><span class="amt">+0.024 SOL</span></div>
+          <div class="lg-row"><span class="ts">14:41:18</span><span class="ev"><span class="pill lit">LAUNCH</span> <b>$MAG</b> launched by 8Yr…s1T · initial buy 0.10 devSOL</span><span class="amt">+0.020 SOL</span></div>
+          <div class="lg-row"><span class="ts">14:40:46</span><span class="ev"><span class="pill act">ACTIV</span> 3Hk…p9L activated 4.84 devSOL</span><span class="amt">+0.048 SOL</span></div>
+          <div class="lg-row"><span class="ts">14:40:22</span><span class="ev"><span class="pill red">REDEEM</span> 7XnZ…q9kF redeemed 1.84 devSOL</span><span class="amt">+1.472 SOL</span></div>
+          <div class="lg-row"><span class="ts">14:40:01</span><span class="ev"><span class="pill grd">GRAD</span> <b>$TRIG</b> graduated · time on curve 2h 38m</span><span class="amt">+85 SOL</span></div>
+          <div class="lg-row"><span class="ts">14:39:14</span><span class="ev"><span class="pill lit">LAUNCH</span> <b>$WICK</b> launched · initial buy 0.50 devSOL</span><span class="amt">+0.100 SOL</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

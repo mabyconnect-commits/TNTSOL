@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>TNTSOL — Brand Identity</title>
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="brand.css" />
+</head>
+<body>
+<div class="page">
+  <header class="topbar">
+    <div class="crumbs">TNTSOL <span class="sep">/</span> <b>Brand Identity</b> <span class="sep">/</span> v0.1</div>
+    <div class="meta">
+      <span>STATUS <b>DRAFT</b></span>
+      <span>NETWORK <b>devnet</b></span>
+      <span>SPEC <b>f039710b</b></span>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="label">Brand system · v0.1 · internal</div>
+    <h1>Light the&nbsp;fuse.<br/>Trade the&nbsp;<em>blast.</em></h1>
+    <p class="lede">TNTSOL is a permissionless trading floor on Solana devnet where every position carries a fuse — a 1% activation fee that converts test SOL into real, redeemable value. Built for traders who like sparks, throughput, and clean accounting.</p>
+    <div class="stats">
+      <div class="stat"><div class="k">Activation fee</div><div class="v">1.0<small>%</small></div></div>
+      <div class="stat"><div class="k">Redemption fee</div><div class="v">0.8<small>%</small></div></div>
+      <div class="stat"><div class="k">Graduation</div><div class="v">85<small>devSOL</small></div></div>
+      <div class="stat"><div class="k">Treasury split</div><div class="v">80<small>/ 20</small></div></div>
+    </div>
+  </section>
+
+  <div id="logo-section"></div>
+  <div id="color-section"></div>
+  <div id="type-section"></div>
+  <div id="icon-section"></div>
+  <div id="voice-section"></div>
+</div>
+
+<script>
+async function load(target, file) {
+  const r = await fetch(file);
+  document.getElementById(target).innerHTML = await r.text();
+}
+load('logo-section', 'sections/logo.html');
+load('color-section', 'sections/color.html');
+load('type-section', 'sections/type.html');
+load('icon-section', 'sections/icon.html');
+load('voice-section', 'sections/voice.html');
+</script>
+</body>
+</html>

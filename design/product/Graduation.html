@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1920" />
+<title>TNTSOL — Graduation animation</title>
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  body { background: var(--carbon); color: var(--bone); margin: 0; }
+  .container { padding: 32px; }
+  .header { display: flex; align-items: end; justify-content: space-between; padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--ash); max-width: 1856px; margin: 0 auto 24px; }
+  .header h1 { font-family: var(--font-display); font-weight: 700; font-size: 28px; letter-spacing: -0.025em; margin: 0; }
+  .header .eyebrow { font-family: var(--font-mono); font-size: 11px; color: var(--tnt-red); letter-spacing: 0.14em; text-transform: uppercase; }
+  .header .meta { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); display: flex; gap: 24px; }
+  .header .meta b { color: var(--fuse-amber); }
+  .stage-wrap { max-width: 1856px; margin: 0 auto; }
+  .notes { max-width: 1856px; margin: 24px auto; padding: 18px 22px; border: 1px solid var(--ash); border-radius: 12px; background: var(--soot); display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .notes .k { font-family: var(--font-mono); font-size: 10px; color: var(--concrete); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 6px; }
+  .notes .v { font-family: var(--font-display); font-size: 13px; color: var(--bone); line-height: 1.5; }
+  .notes .v b { color: var(--tnt-red); }
+</style>
+</head>
+<body>
+<div class="container">
+  <header class="header">
+    <div>
+      <div class="eyebrow">TNTSOL · GRADUATION ANIMATION</div>
+      <h1>The Blast — when a curve closes.</h1>
+    </div>
+    <div class="meta">
+      <span>DURATION <b>6s</b></span>
+      <span>1920×1080</span>
+      <span>SCRUBBABLE</span>
+    </div>
+  </header>
+
+  <div class="stage-wrap" id="stage"></div>
+
+  <div class="notes">
+    <div><div class="k">00 – 1.5s</div><div class="v">Curve at <b>96.9%</b>. Last fuse buy. Heartbeat builds.</div></div>
+    <div><div class="k">1.5 – 2.2s</div><div class="v">Curve fills to 100%. Spark ignites. Sound: <b>fuse hiss</b>.</div></div>
+    <div><div class="k">2.2 – 3.5s</div><div class="v">DETONATION. Particles burst. Mark blooms.</div></div>
+    <div><div class="k">3.5 – 6.0s</div><div class="v"><b>"GRADUATED"</b> reveals. LP confirmed. Stats settle in.</div></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="animations.jsx"></script>
+<script type="text/babel" src="graduation.jsx"></script>
+</body>
+</html>

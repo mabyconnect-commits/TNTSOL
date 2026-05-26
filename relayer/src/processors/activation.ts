@@ -53,7 +53,9 @@ export class ActivationProcessor {
       }
     }
 
-    // STEP 2 — devnet whitelist only after the fee is secured.
+    // STEP 2 — devnet whitelist only after the fee is secured. On-chain this
+    // finalizes the activation (pending -> whitelisted); the funds were merely
+    // reserved at buy time, so they never count toward solvency until now.
     if (rec.status === "FEE_COLLECTED") {
       try {
         const res = await this.adapter.whitelistDevnet(rec.user, rec.devnetAmount, `act:${rec.id}:wl`);

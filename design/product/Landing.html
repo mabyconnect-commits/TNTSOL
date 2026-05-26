@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>TNTSOL — Light the fuse. Trade the blast.</title>
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  body { background: var(--carbon); color: var(--bone); margin: 0; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 32px; }
+
+  /* === Nav === */
+  .topnav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 0; max-width: 1280px; margin: 0 auto; padding: 22px 32px;
+  }
+  .topnav .brand { display: flex; align-items: center; gap: 10px; }
+  .topnav .brand .name { font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: -0.04em; }
+  .topnav .brand .name .red { color: var(--tnt-red); }
+  .topnav .brand .net { font-family: var(--font-mono); font-size: 10px; padding: 3px 8px; border-radius: 999px; background: var(--blacklist-bg); color: var(--blacklist); border: 1px solid var(--blacklist-soft); letter-spacing: 0.12em; margin-left: 4px; }
+  .nav-links { display: flex; gap: 8px; align-items: center; }
+  .nav-links a { font-family: var(--font-display); font-size: 14px; color: var(--concrete); padding: 8px 12px; border-radius: 6px; text-decoration: none; }
+  .nav-links a:hover { color: var(--bone); }
+  .nav-cta { display: flex; gap: 8px; align-items: center; }
+  .nav-cta .btn { font-family: var(--font-display); font-weight: 600; font-size: 13px; padding: 9px 14px; border-radius: 8px; border: 1px solid var(--ash); background: transparent; color: var(--bone); cursor: pointer; text-decoration: none; }
+  .nav-cta .btn.primary { background: var(--tnt-red); border-color: var(--tnt-red); color: var(--carbon); }
+
+  /* === Hero === */
+  .hero { padding: 80px 32px 100px; max-width: 1280px; margin: 0 auto; position: relative; overflow: hidden; }
+  .hero::before {
+    content: ''; position: absolute; right: -10%; top: -20%;
+    width: 700px; height: 700px;
+    background: radial-gradient(circle, rgba(255,45,31,0.18), transparent 60%);
+    pointer-events: none;
+  }
+  .hero::after {
+    content: ''; position: absolute; left: -20%; bottom: -10%;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(255,182,39,0.10), transparent 60%);
+    pointer-events: none;
+  }
+  .hero-inner { position: relative; z-index: 1; max-width: 880px; }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--font-mono); font-size: 12px;
+    color: var(--tnt-red); letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 8px 14px; border-radius: 999px;
+    background: rgba(255,45,31,0.10); border: 1px solid rgba(255,45,31,0.3);
+  }
+  .hero-eyebrow::before {
+    content: ''; width: 6px; height: 6px; background: var(--tnt-red); border-radius: 50%;
+    box-shadow: 0 0 12px var(--tnt-red); animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse { 50% { opacity: 0.4; } }
+  .hero h1 {
+    font-family: var(--font-display); font-weight: 700;
+    font-size: 120px; line-height: 0.9; letter-spacing: -0.05em;
+    margin: 24px 0 24px; text-wrap: balance;
+  }
+  .hero h1 em { font-style: normal; color: var(--tnt-red); }
+  .hero p { font-size: 22px; line-height: 1.45; max-width: 680px; color: var(--bone); opacity: 0.78; margin: 0 0 36px; }
+  .hero-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .hero-btn {
+    font-family: var(--font-display); font-weight: 700; font-size: 16px;
+    padding: 16px 22px; border-radius: 12px;
+    background: var(--tnt-red); color: var(--carbon); border: 0;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+    cursor: pointer; box-shadow: 0 20px 50px -16px rgba(255,45,31,0.5);
+  }
+  .hero-btn.ghost { background: transparent; color: var(--bone); border: 1px solid var(--ash); box-shadow: none; }
+  .hero-meta { display: flex; gap: 24px; margin-top: 32px; font-family: var(--font-mono); font-size: 12px; color: var(--concrete); }
+  .hero-meta b { color: var(--bone); }
+
+  /* === Stat strip === */
+  .stat-strip {
+    max-width: 1280px; margin: 0 auto; padding: 0 32px 80px;
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--ash); border: 1px solid var(--ash); border-radius: var(--r-lg); overflow: hidden;
+  }
+  .stat-strip .cell { background: var(--soot); padding: 28px 32px; }
+  .stat-strip .cell .k { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); letter-spacing: 0.14em; text-transform: uppercase; }
+  .stat-strip .cell .v { font-family: var(--font-display); font-weight: 700; font-size: 44px; margin-top: 8px; letter-spacing: -0.025em; line-height: 1; }
+  .stat-strip .cell .v small { font-size: 16px; color: var(--concrete); font-weight: 500; font-family: var(--font-mono); margin-left: 6px; }
+  .stat-strip .cell .desc { font-family: var(--font-mono); font-size: 11px; color: var(--whitelist); margin-top: 6px; }
+
+  /* === Section === */
+  .section { padding: 96px 32px; max-width: 1280px; margin: 0 auto; }
+  .section-eyebrow { font-family: var(--font-mono); font-size: 12px; color: var(--tnt-red); letter-spacing: 0.16em; text-transform: uppercase; display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+  .section-eyebrow::before { content: ''; width: 32px; height: 1px; background: var(--tnt-red); }
+  .section h2 { font-family: var(--font-display); font-weight: 700; font-size: 56px; letter-spacing: -0.035em; margin: 0 0 20px; line-height: 1; max-width: 800px; }
+  .section h2 em { font-style: normal; color: var(--tnt-red); }
+  .section .lede { font-size: 19px; line-height: 1.55; color: var(--bone); opacity: 0.78; max-width: 680px; margin-bottom: 56px; }
+
+  /* === How it works grid === */
+  .how-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .how-card { padding: 32px 28px; border: 1px solid var(--ash); border-radius: var(--r-lg); background: var(--soot); position: relative; overflow: hidden; }
+  .how-card .step {
+    font-family: var(--font-mono); font-size: 11px; color: var(--tnt-red); letter-spacing: 0.16em; margin-bottom: 18px; display: inline-flex; align-items: center; gap: 8px;
+  }
+  .how-card .step .n {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--carbon); border: 1px solid var(--tnt-red);
+    display: grid; place-items: center; font-weight: 700; color: var(--tnt-red);
+  }
+  .how-card h3 { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -0.02em; margin: 0 0 12px; line-height: 1.15; }
+  .how-card p { font-size: 14px; color: var(--bone); opacity: 0.78; line-height: 1.6; margin: 0 0 20px; }
+  .how-card .demo {
+    margin-top: 24px; padding: 18px; border-radius: 10px;
+    background: var(--carbon); border: 1px solid var(--ash);
+    font-family: var(--font-mono); font-size: 12px; line-height: 1.6;
+  }
+  .how-card .demo .k { color: var(--concrete); }
+  .how-card .demo .v { color: var(--bone); }
+  .how-card .demo .v.green { color: var(--whitelist); }
+  .how-card .demo .v.amber { color: var(--fuse-amber); }
+  .how-card .demo .v.red { color: var(--tnt-red); }
+  .how-card .demo .row { display: flex; justify-content: space-between; padding: 2px 0; }
+  .how-card .demo .divider { height: 1px; background: var(--ash); margin: 6px 0; }
+
+  /* === Feature row === */
+  .feat-row { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; padding: 80px 0; border-bottom: 1px solid var(--ash); }
+  .feat-row:last-child { border-bottom: 0; }
+  .feat-row .vis { border: 1px solid var(--ash); border-radius: var(--r-lg); background: var(--soot); padding: 24px; min-height: 420px; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
+  .feat-row .copy h3 { font-family: var(--font-display); font-weight: 700; font-size: 38px; letter-spacing: -0.025em; line-height: 1.05; margin: 0 0 16px; }
+  .feat-row .copy h3 em { font-style: normal; color: var(--tnt-red); }
+  .feat-row .copy .eyebrow { font-family: var(--font-mono); font-size: 12px; color: var(--tnt-red); letter-spacing: 0.16em; margin-bottom: 14px; }
+  .feat-row .copy p { font-size: 16px; color: var(--bone); opacity: 0.8; line-height: 1.6; margin: 0 0 24px; max-width: 460px; }
+  .feat-row .copy ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+  .feat-row .copy li { display: flex; gap: 12px; font-size: 14px; color: var(--bone); opacity: 0.85; }
+  .feat-row .copy li::before { content: '▸'; color: var(--tnt-red); font-weight: 700; }
+
+  /* === CTA bar === */
+  .cta-bar {
+    margin: 80px auto; max-width: 1216px; padding: 56px 64px;
+    border: 1px solid var(--tnt-red-deep); border-radius: var(--r-lg);
+    background:
+      radial-gradient(ellipse at 80% 50%, rgba(255,45,31,0.18), transparent 60%),
+      radial-gradient(ellipse at 20% 50%, rgba(255,182,39,0.10), transparent 60%),
+      var(--soot);
+    display: flex; justify-content: space-between; align-items: center; gap: 32px;
+  }
+  .cta-bar h3 { font-family: var(--font-display); font-weight: 700; font-size: 40px; letter-spacing: -0.025em; line-height: 1; margin: 0 0 8px; }
+  .cta-bar h3 em { font-style: normal; color: var(--tnt-red); }
+  .cta-bar p { font-size: 15px; color: var(--bone); opacity: 0.78; line-height: 1.5; margin: 0; max-width: 540px; }
+
+  /* === Footer === */
+  .footer { padding: 60px 32px 80px; max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 32px; border-top: 1px solid var(--ash); }
+  .footer .brand-block .name { font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -0.04em; display: flex; align-items: center; gap: 12px; }
+  .footer .brand-block .name .red { color: var(--tnt-red); }
+  .footer .brand-block p { font-size: 13px; color: var(--concrete); margin-top: 16px; line-height: 1.5; max-width: 320px; }
+  .footer h4 { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); letter-spacing: 0.14em; text-transform: uppercase; margin: 0 0 14px; }
+  .footer ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+  .footer ul a { font-family: var(--font-display); font-size: 14px; color: var(--bone); opacity: 0.8; text-decoration: none; }
+  .footer ul a:hover { opacity: 1; color: var(--tnt-red); }
+  .colophon { padding: 24px 32px; max-width: 1280px; margin: 0 auto; border-top: 1px solid var(--ash); font-family: var(--font-mono); font-size: 11px; color: var(--gravel); display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<header class="topnav">
+  <div class="brand">
+    <svg width="22" height="30" viewBox="0 0 80 110">
+      <path d="M40 28 C 40 14, 60 14, 68 4" fill="none" stroke="#FFB627" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="68" cy="4" r="4" fill="#FFB627"/>
+      <rect x="11" y="25" width="58" height="9" rx="2" fill="#0A0908"/>
+      <rect x="11" y="33" width="58" height="68" rx="5" fill="#FF2D1F"/>
+      <text x="40" y="74" text-anchor="middle" font-family="JetBrains Mono, monospace" font-weight="700" font-size="15" fill="#FFF6E8" letter-spacing="0.05em">TNT</text>
+    </svg>
+    <span class="name">TNT<span class="red">SOL</span></span>
+    <span class="net">● DEVNET</span>
+  </div>
+  <nav class="nav-links">
+    <a href="screens/Floor.html">Floor</a>
+    <a href="screens/Launch.html">Launch</a>
+    <a href="screens/Redeem.html">Redeem</a>
+    <a>Docs</a>
+    <a>Treasury</a>
+  </nav>
+  <div class="nav-cta">
+    <a class="btn">Connect wallet</a>
+    <a class="btn primary" href="screens/Floor.html">Open app →</a>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-eyebrow">Permissionless · Solana devnet · live</div>
+    <h1>Light the fuse.<br/>Trade the <em>blast.</em></h1>
+    <p>The first devnet trading floor where every position carries a fuse. Pay a 1% activation fee, your test SOL becomes <b style="color:var(--whitelist);">real, redeemable</b>, mainnet SOL.</p>
+    <div class="hero-actions">
+      <a class="hero-btn" href="screens/Floor.html">⚡ Launch the floor →</a>
+      <a class="hero-btn ghost" href="screens/Launch.html">Light your own fuse</a>
+    </div>
+    <div class="hero-meta">
+      <span>FLOOR <b>1,284 tokens</b></span>
+      <span>TREASURY <b>1,284 SOL</b></span>
+      <span>REDEMPTIONS · 24H <b>38</b></span>
+      <span>RESERVE RATIO <b style="color:var(--whitelist);">120%</b></span>
+    </div>
+  </div>
+</section>
+
+<!-- Stats strip -->
+<div class="stat-strip">
+  <div class="cell">
+    <div class="k">Activation fee</div>
+    <div class="v">1.0<small>%</small></div>
+    <div class="desc">↳ Once. Forever redeemable.</div>
+  </div>
+  <div class="cell">
+    <div class="k">Redemption</div>
+    <div class="v">0.8<small>%</small></div>
+    <div class="desc">↳ devSOL → mainnet SOL</div>
+  </div>
+  <div class="cell">
+    <div class="k">Graduation</div>
+    <div class="v">85<small>devSOL</small></div>
+    <div class="desc">↳ LP migrates · curve closes</div>
+  </div>
+  <div class="cell">
+    <div class="k">Treasury split</div>
+    <div class="v">80<small>/ 20</small></div>
+    <div class="desc">↳ Reserve / operators</div>
+  </div>
+</div>
+
+<!-- How it works -->
+<section class="section">
+  <div class="section-eyebrow">HOW IT WORKS</div>
+  <h2>Three steps. <em>One fuse.</em></h2>
+  <p class="lede">The bucket system is what makes TNTSOL different from every other devnet faucet — it gives test SOL real, redeemable value, gated by a single activation fee.</p>
+
+  <div class="how-grid">
+    <div class="how-card">
+      <div class="step"><span class="n">1</span> ACQUIRE</div>
+      <h3>Get devSOL.<br/>Status: blacklist.</h3>
+      <p>Bridge in, faucet, or earn devSOL on the floor. Fresh balances start <b style="color:var(--fuse-amber);">blacklisted</b> — you can trade with them, but they're not redeemable yet.</p>
+      <div class="demo">
+        <div class="row"><span class="k">Faucet</span><span class="v">+10.000 devSOL</span></div>
+        <div class="row"><span class="k">Bucket</span><span class="v amber">● BLACKLIST</span></div>
+        <div class="row"><span class="k">Redeemable</span><span class="v amber">— locked</span></div>
+      </div>
+    </div>
+
+    <div class="how-card">
+      <div class="step"><span class="n">2</span> ACTIVATE</div>
+      <h3>Light the fuse.<br/>Pay 1% once.</h3>
+      <p>Any trade you make burns a one-time <b style="color:var(--tnt-red);">1% activation fee</b>. The remaining 99% becomes <b style="color:var(--whitelist);">whitelist</b> forever — and stays redeemable across any future trade.</p>
+      <div class="demo">
+        <div class="row"><span class="k">Trade</span><span class="v">0.500 devSOL</span></div>
+        <div class="row"><span class="k">Activation fee · 1%</span><span class="v red">−0.005</span></div>
+        <div class="divider"></div>
+        <div class="row"><span class="k">Whitelisted</span><span class="v green">+0.495 devSOL</span></div>
+      </div>
+    </div>
+
+    <div class="how-card">
+      <div class="step"><span class="n">3</span> REDEEM</div>
+      <h3>Cash out.<br/>Mainnet SOL.</h3>
+      <p>Click redeem, pay <b>0.8%</b>, and your whitelisted devSOL converts to real mainnet SOL — settled in a single transaction. No KYC, no bridges, no claims.</p>
+      <div class="demo">
+        <div class="row"><span class="k">Whitelist balance</span><span class="v">10.81 devSOL</span></div>
+        <div class="row"><span class="k">Redemption fee · 0.8%</span><span class="v red">−0.064</span></div>
+        <div class="divider"></div>
+        <div class="row"><span class="k">Settles to mainnet</span><span class="v green">+8.648 SOL</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Feature rows -->
+<section class="section" style="padding-top: 0;">
+  <div class="feat-row">
+    <div class="copy">
+      <div class="eyebrow">THE FLOOR · DISCOVERY</div>
+      <h3>A live, public, <em>brutal</em> floor.</h3>
+      <p>Every token launched on TNTSOL hits a single discovery feed — pumps, sparks, dust, and graduations, all in one screen. Filter by bucket, sort by heat, follow the crew.</p>
+      <ul>
+        <li>Real-time transaction firehose</li>
+        <li>Bucket-aware filtering — whitelist vs blacklist</li>
+        <li>Graduation imminent notifications</li>
+        <li>Crew lists — copy-trade what your friends are buying</li>
+      </ul>
+    </div>
+    <div class="vis">
+      <!-- mock visual -->
+      <div style="width:100%; display:flex; flex-direction:column; gap:8px;">
+        <div style="padding:16px; border:1px solid var(--tnt-red-deep); background: linear-gradient(135deg, rgba(255,45,31,0.12), transparent); border-radius:10px;">
+          <div style="font-family: var(--font-mono); font-size: 10px; color: var(--tnt-red); letter-spacing: 0.14em; margin-bottom: 8px;">● GRADUATING NOW</div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div style="font-family: var(--font-display); font-weight: 700; font-size: 18px;">Pepe Detonator <span style="color: var(--concrete); font-weight: 500; font-size: 13px; font-family: var(--font-mono);">$PEPED</span></div>
+            <div style="font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--whitelist);">+184%</div>
+          </div>
+          <div style="margin-top: 10px; height: 6px; background: var(--carbon); border-radius: 3px; overflow: hidden;">
+            <div style="height: 100%; width: 96%; background: linear-gradient(90deg, var(--tnt-red), var(--fuse-amber));"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--concrete); margin-top: 6px;"><span>Curve</span><span><b style="color:var(--bone);">82.4</b> / 85 devSOL</span></div>
+        </div>
+        <div style="padding:14px; border:1px solid var(--ash); background: var(--carbon); border-radius:10px; display: flex; align-items: center; gap: 10px;">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: #9945FF; display: grid; place-items: center; font-weight: 700; color: #FFF6E8;">F</div>
+          <div style="flex:1;">
+            <div style="font-family: var(--font-display); font-weight: 600; font-size: 14px;">Fuse Coin <span style="color: var(--concrete); font-family: var(--font-mono); font-weight: 500; font-size: 11px;">$FUSE</span></div>
+            <div style="font-family: var(--font-mono); font-size: 10px; color: var(--whitelist); margin-top: 2px;">● WL · 612 holders</div>
+          </div>
+          <div style="font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--whitelist);">+67%</div>
+        </div>
+        <div style="padding:14px; border:1px solid var(--ash); background: var(--carbon); border-radius:10px; display: flex; align-items: center; gap: 10px;">
+          <div style="width: 36px; height: 36px; border-radius: 8px; background: #14F195; display: grid; place-items: center; font-weight: 700; color: #0A0908;">B</div>
+          <div style="flex:1;">
+            <div style="font-family: var(--font-display); font-weight: 600; font-size: 14px;">Boom Town <span style="color: var(--concrete); font-family: var(--font-mono); font-weight: 500; font-size: 11px;">$BOOM</span></div>
+            <div style="font-family: var(--font-mono); font-size: 10px; color: var(--blacklist); margin-top: 2px;">● BL · 89 holders</div>
+          </div>
+          <div style="font-family: var(--font-mono); font-size: 14px; font-weight: 700; color: var(--whitelist);">+42%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="feat-row" style="grid-template-columns: 1fr 1fr;">
+    <div class="vis" style="order:1;">
+      <!-- bucket donut mock -->
+      <div style="text-align: center;">
+        <div style="position: relative; width: 240px; height: 240px; margin: 0 auto 24px;">
+          <svg viewBox="0 0 200 200" style="width: 100%; height: 100%; transform: rotate(-90deg);">
+            <circle cx="100" cy="100" r="80" fill="none" stroke="#25221F" stroke-width="22"/>
+            <circle cx="100" cy="100" r="80" fill="none" stroke="#14F195" stroke-width="22" stroke-dasharray="367 502.65"/>
+            <circle cx="100" cy="100" r="80" fill="none" stroke="#FFB627" stroke-width="22" stroke-dasharray="135 502.65" stroke-dashoffset="-367"/>
+          </svg>
+          <div style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+            <div style="font-family: var(--font-mono); font-size: 10px; color: var(--concrete); letter-spacing: 0.14em;">REDEEMABLE</div>
+            <div style="font-family: var(--font-display); font-weight: 700; font-size: 48px; color: var(--whitelist); letter-spacing: -0.025em;">73%</div>
+            <div style="font-family: var(--font-mono); font-size: 11px; color: var(--bone);">10.81 / 14.82 devSOL</div>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; max-width: 320px; margin: 0 auto;">
+          <div style="padding: 10px 14px; background: var(--carbon); border: 1px solid var(--ash); border-left: 3px solid var(--whitelist); border-radius: 8px;">
+            <div style="font-family: var(--font-mono); font-size: 9px; color: var(--concrete); letter-spacing: 0.1em;">WHITELIST</div>
+            <div style="font-family: var(--font-mono); font-size: 16px; font-weight: 700;">10.81</div>
+          </div>
+          <div style="padding: 10px 14px; background: var(--carbon); border: 1px solid var(--ash); border-left: 3px solid var(--blacklist); border-radius: 8px;">
+            <div style="font-family: var(--font-mono); font-size: 9px; color: var(--concrete); letter-spacing: 0.1em;">BLACKLIST</div>
+            <div style="font-family: var(--font-mono); font-size: 16px; font-weight: 700;">4.01</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="copy" style="order:2;">
+      <div class="eyebrow">BUCKETS · THE INNOVATION</div>
+      <h3>Whitelist or blacklist.<br/>Always <em>visible.</em></h3>
+      <p>Every devSOL you hold knows its own bucket. Whitelisted balances are activated and ready to redeem. Blacklisted balances need a single 1% trade to become live. Your portfolio shows the split everywhere it matters.</p>
+      <ul>
+        <li>Per-token bucket badges across all UI</li>
+        <li>Net-worth pie split at a glance</li>
+        <li>One-click batch activation</li>
+        <li>Treasury reserve ratio published openly</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- CTA bar -->
+<div class="cta-bar">
+  <div>
+    <h3>Pull the trigger.<br/><em>Light a token.</em></h3>
+    <p>Launches are permissionless. Pick a name, a ticker, and an avatar — your token is mintable in one click, with a curve open for trade at slot+1.</p>
+  </div>
+  <a class="hero-btn" href="screens/Launch.html" style="white-space: nowrap;">🧨 Light the fuse →</a>
+</div>
+
+<footer class="footer">
+  <div class="brand-block">
+    <div class="name">
+      <svg width="24" height="32" viewBox="0 0 80 110">
+        <path d="M40 28 C 40 14, 60 14, 68 4" fill="none" stroke="#FFB627" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="68" cy="4" r="4" fill="#FFB627"/>
+        <rect x="11" y="25" width="58" height="9" rx="2" fill="#0A0908"/>
+        <rect x="11" y="33" width="58" height="68" rx="5" fill="#FF2D1F"/>
+        <text x="40" y="74" text-anchor="middle" font-family="JetBrains Mono, monospace" font-weight="700" font-size="15" fill="#FFF6E8" letter-spacing="0.05em">TNT</text>
+      </svg>
+      TNT<span class="red">SOL</span>
+    </div>
+    <p>The first permissionless devnet trading floor where every position can graduate to real, redeemable mainnet value. Built on Solana.</p>
+  </div>
+  <div>
+    <h4>PRODUCT</h4>
+    <ul>
+      <li><a href="screens/Floor.html">Floor</a></li>
+      <li><a href="screens/Launch.html">Launch a token</a></li>
+      <li><a href="screens/Portfolio.html">Portfolio</a></li>
+      <li><a href="screens/Redeem.html">Redeem</a></li>
+    </ul>
+  </div>
+  <div>
+    <h4>RESOURCES</h4>
+    <ul>
+      <li><a>Documentation</a></li>
+      <li><a>Treasury &amp; audit</a></li>
+      <li><a>API · webhooks</a></li>
+      <li><a>Brand kit</a></li>
+    </ul>
+  </div>
+  <div>
+    <h4>COMMUNITY</h4>
+    <ul>
+      <li><a>𝕏 @tntsol</a></li>
+      <li><a>Discord</a></li>
+      <li><a>Telegram</a></li>
+      <li><a>GitHub</a></li>
+    </ul>
+  </div>
+</footer>
+
+<div class="colophon">
+  <span>© 2026 TNTSOL Labs. Built on Solana devnet. Trade carefully — no warranty.</span>
+  <span>v0.1.0 · build f039710b · devnet</span>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,522 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1440" />
+<title>TNTSOL — Transaction states</title>
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  body { background: var(--carbon); color: var(--bone); margin: 0; }
+  .page { max-width: 1440px; margin: 0 auto; padding: 48px 48px 96px; }
+
+  .head { padding-bottom: 28px; margin-bottom: 48px; border-bottom: 1px solid var(--ash); display: flex; align-items: end; justify-content: space-between; }
+  .head h1 { font-family: var(--font-display); font-weight: 700; font-size: 36px; letter-spacing: -0.03em; margin: 8px 0 8px; }
+  .head .eyebrow { font-family: var(--font-mono); font-size: 11px; color: var(--tnt-red); letter-spacing: 0.14em; text-transform: uppercase; }
+  .head .sub { font-family: var(--font-mono); font-size: 12px; color: var(--concrete); }
+  .head .meta { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); display: flex; gap: 24px; }
+  .head .meta b { color: var(--fuse-amber); }
+
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 48px; }
+  .state-wrap { display: flex; flex-direction: column; gap: 14px; }
+  .state-label { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); letter-spacing: 0.12em; text-transform: uppercase; display: flex; align-items: center; justify-content: space-between; }
+  .state-label b { color: var(--bone); font-weight: 600; }
+  .state-label .pill { font-family: var(--font-mono); font-size: 9px; padding: 2px 6px; border-radius: 3px; letter-spacing: 0.1em; background: var(--ash); color: var(--bone); }
+  .state-label .pill.success { background: var(--whitelist-bg); color: var(--whitelist); }
+  .state-label .pill.error { background: rgba(255,45,31,0.15); color: var(--tnt-red); }
+  .state-label .pill.warn { background: var(--blacklist-bg); color: var(--blacklist); }
+
+  /* Modal frame */
+  .modal {
+    background: var(--soot); border: 1px solid var(--ash); border-radius: 18px;
+    padding: 32px 28px; aspect-ratio: 1/1.1;
+    display: flex; flex-direction: column; gap: 18px; align-items: center; text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .modal::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+  }
+  .modal.pending::before { background: radial-gradient(ellipse at 50% 0%, rgba(255,182,39,0.18), transparent 60%); }
+  .modal.success::before { background: radial-gradient(ellipse at 50% 0%, rgba(20,241,149,0.18), transparent 60%); }
+  .modal.fail::before { background: radial-gradient(ellipse at 50% 0%, rgba(255,45,31,0.20), transparent 60%); }
+  .modal.grad::before { background: radial-gradient(ellipse at 50% 0%, rgba(255,45,31,0.30), transparent 60%); }
+  .modal.activate::before { background: radial-gradient(ellipse at 50% 0%, rgba(255,182,39,0.25), transparent 60%); }
+  .modal.redeem::before { background: radial-gradient(ellipse at 50% 0%, rgba(20,241,149,0.18), transparent 60%); }
+
+  .modal > * { position: relative; z-index: 1; }
+
+  /* Icon block */
+  .ic-circle {
+    width: 80px; height: 80px; border-radius: 22px;
+    display: grid; place-items: center; font-size: 36px;
+    margin-top: 4px;
+  }
+  .ic-circle.pending { background: var(--blacklist-bg); border: 1px solid var(--blacklist); color: var(--blacklist); position: relative; }
+  .ic-circle.pending::after {
+    content: ''; position: absolute; inset: -6px; border-radius: 28px;
+    border: 2px solid var(--fuse-amber); border-top-color: transparent; border-right-color: transparent;
+    animation: spin 1.4s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ic-circle.success { background: var(--whitelist-bg); border: 1px solid var(--whitelist); color: var(--whitelist); }
+  .ic-circle.fail { background: rgba(255,45,31,0.15); border: 1px solid var(--tnt-red); color: var(--tnt-red); }
+  .ic-circle.grad { background: linear-gradient(135deg, var(--tnt-red), var(--fuse-amber)); color: var(--carbon); }
+
+  /* Steps */
+  .steps { display: flex; gap: 6px; margin-top: 8px; }
+  .steps .step {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--concrete); letter-spacing: 0.08em;
+  }
+  .steps .step::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--ash); }
+  .steps .step.done { color: var(--whitelist); }
+  .steps .step.done::before { background: var(--whitelist); box-shadow: 0 0 6px var(--whitelist); }
+  .steps .step.active { color: var(--fuse-amber); }
+  .steps .step.active::before { background: var(--fuse-amber); box-shadow: 0 0 6px var(--fuse-amber); animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { opacity: 0.4; } }
+  .steps .step::after { content: ''; width: 16px; height: 1px; background: var(--ash); margin-left: 2px; }
+  .steps .step:last-child::after { display: none; }
+
+  /* Title + body */
+  .m-title {
+    font-family: var(--font-display); font-weight: 700; font-size: 24px;
+    letter-spacing: -0.02em; line-height: 1.15; margin: 6px 0 4px;
+  }
+  .m-title em { font-style: normal; }
+  .m-title.success em { color: var(--whitelist); }
+  .m-title.fail em { color: var(--tnt-red); }
+  .m-title.grad em { color: var(--tnt-red); }
+  .m-title.activate em { color: var(--fuse-amber); }
+  .m-sub { font-size: 13px; color: var(--bone); opacity: 0.78; line-height: 1.55; margin: 0; max-width: 280px; }
+
+  /* Receipt block */
+  .m-receipt {
+    width: 100%; padding: 14px 16px; border-radius: 10px;
+    background: var(--carbon); border: 1px solid var(--ash);
+    font-family: var(--font-mono); font-size: 12px;
+    display: flex; flex-direction: column; gap: 8px; margin-top: 4px;
+  }
+  .m-receipt .r { display: flex; justify-content: space-between; }
+  .m-receipt .r .k { color: var(--concrete); }
+  .m-receipt .r .v { color: var(--bone); font-weight: 600; }
+  .m-receipt .r .v.green { color: var(--whitelist); }
+  .m-receipt .r .v.amber { color: var(--fuse-amber); }
+  .m-receipt .r .v.red { color: var(--tnt-red); }
+  .m-receipt .div { height: 1px; background: var(--ash); margin: 2px 0; }
+
+  /* Buttons row */
+  .m-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; margin-top: auto; }
+  .m-actions.single { grid-template-columns: 1fr; }
+  .btn { padding: 12px 14px; border-radius: 10px; font-family: var(--font-display); font-weight: 700; font-size: 14px; cursor: pointer; border: 0; }
+  .btn.primary { background: var(--whitelist); color: var(--carbon); }
+  .btn.danger { background: var(--tnt-red); color: var(--carbon); }
+  .btn.amber { background: var(--fuse-amber); color: var(--carbon); }
+  .btn.ghost { background: transparent; color: var(--bone); border: 1px solid var(--ash); }
+  .btn.ghost:hover { border-color: var(--gravel); }
+
+  /* tx footer */
+  .tx-foot {
+    font-family: var(--font-mono); font-size: 10px; color: var(--gravel);
+    line-height: 1.6; text-align: center; padding-top: 8px;
+    border-top: 1px solid var(--ash); width: 100%;
+  }
+  .tx-foot a { color: var(--bone); }
+
+  /* Section header */
+  .sec-h { display: flex; align-items: baseline; gap: 20px; margin: 40px 0 20px; }
+  .sec-h .n { font-family: var(--font-mono); font-size: 12px; color: var(--tnt-red); letter-spacing: 0.08em; }
+  .sec-h h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 24px; letter-spacing: -0.02em; }
+  .sec-h .r { flex: 1; height: 1px; background: var(--ash); }
+  .sec-h .s { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  /* Graduation card — special, full width */
+  .grad-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 20px; }
+  .grad-hero {
+    background:
+      radial-gradient(circle at 30% 0%, rgba(255,45,31,0.30), transparent 60%),
+      radial-gradient(circle at 80% 100%, rgba(255,182,39,0.25), transparent 60%),
+      var(--soot);
+    border: 1px solid var(--tnt-red);
+    aspect-ratio: 1.6/1;
+    border-radius: 22px;
+    padding: 36px 32px;
+    display: flex; flex-direction: column; gap: 18px; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .grad-hero::before {
+    content: ''; position: absolute; top: -10%; right: -10%;
+    width: 60%; aspect-ratio: 1/1;
+    background: radial-gradient(circle, rgba(255,255,255,0.18), transparent 40%);
+    border-radius: 50%; pointer-events: none;
+  }
+  .grad-hero .eyebrow {
+    font-family: var(--font-mono); font-size: 12px; color: var(--tnt-red);
+    letter-spacing: 0.2em; text-transform: uppercase;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .grad-hero .eyebrow::before { content: '🎓'; }
+  .grad-hero h2 { font-family: var(--font-display); font-weight: 700; font-size: 56px; letter-spacing: -0.035em; line-height: 1; margin: 0; }
+  .grad-hero h2 em { font-style: normal; color: var(--tnt-red); }
+  .grad-hero p { font-size: 16px; color: var(--bone); opacity: 0.85; line-height: 1.5; max-width: 540px; margin: 0; }
+  .grad-hero .stats-inline { display: flex; gap: 28px; margin-top: 10px; }
+  .grad-hero .stats-inline div { font-family: var(--font-mono); font-size: 12px; color: var(--concrete); }
+  .grad-hero .stats-inline div b { display: block; color: var(--bone); font-size: 20px; font-weight: 700; font-family: var(--font-display); letter-spacing: -0.01em; margin-top: 2px; }
+
+  /* Big buy-button cell */
+  .buy-prompt {
+    padding: 24px;
+    background: linear-gradient(160deg, var(--tnt-red), var(--tnt-red-deep));
+    border-radius: 18px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    aspect-ratio: 1/1;
+    color: var(--carbon);
+    position: relative; overflow: hidden;
+  }
+  .buy-prompt::before {
+    content: '🧨'; position: absolute; top: 14px; right: 18px;
+    font-size: 28px; opacity: 0.4;
+  }
+  .buy-prompt h3 { font-family: var(--font-display); font-weight: 700; font-size: 28px; letter-spacing: -0.025em; margin: 0; line-height: 1.05; color: var(--carbon); }
+  .buy-prompt p { font-size: 13px; color: var(--carbon); opacity: 0.75; line-height: 1.5; margin: 8px 0 0; }
+  .buy-prompt button {
+    background: var(--carbon); color: var(--tnt-red);
+    border: 0; padding: 14px; border-radius: 10px;
+    font-family: var(--font-display); font-weight: 700; font-size: 15px;
+    margin-top: auto; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="head">
+    <div>
+      <div class="eyebrow">TNTSOL · TRANSACTION STATES</div>
+      <h1>Every fuse, every state.</h1>
+      <div class="sub">Modal patterns for trades, activations, redemptions, graduations, and failures.</div>
+    </div>
+    <div class="meta">
+      <span>STATES <b>11</b></span>
+      <span>SOLANA <b>devnet</b></span>
+      <span>v <b>0.1</b></span>
+    </div>
+  </header>
+
+  <!-- ============================ -->
+  <!-- 01 — BUY TRADE FLOW -->
+  <!-- ============================ -->
+  <div class="sec-h">
+    <div class="n">01</div>
+    <h2>Buy trade</h2>
+    <div class="r"></div>
+    <div class="s">Sign → Broadcast → Settle</div>
+  </div>
+
+  <div class="row">
+    <!-- Signing -->
+    <div class="state-wrap">
+      <div class="state-label"><b>01. Signing</b><span class="pill warn">PENDING</span></div>
+      <div class="modal pending">
+        <div class="ic-circle pending">🔑</div>
+        <div class="steps">
+          <span class="step active">SIGN</span>
+          <span class="step">BROADCAST</span>
+          <span class="step">SETTLE</span>
+        </div>
+        <div class="m-title">Sign in wallet</div>
+        <p class="m-sub">Approve the transaction in your wallet to continue.</p>
+        <div class="m-receipt">
+          <div class="r"><span class="k">You pay</span><span class="v">0.5000 devSOL</span></div>
+          <div class="r"><span class="k">You receive</span><span class="v green">≈ 1,214 PEPED</span></div>
+          <div class="r"><span class="k">Activation fee · 1%</span><span class="v amber">−0.0050</span></div>
+        </div>
+        <div class="m-actions"><button class="btn ghost">Cancel</button><button class="btn primary">Open wallet</button></div>
+      </div>
+    </div>
+
+    <!-- Broadcasting -->
+    <div class="state-wrap">
+      <div class="state-label"><b>02. Broadcasting</b><span class="pill warn">DETONATING</span></div>
+      <div class="modal pending">
+        <div class="ic-circle pending">🧨</div>
+        <div class="steps">
+          <span class="step done">SIGN</span>
+          <span class="step active">BROADCAST</span>
+          <span class="step">SETTLE</span>
+        </div>
+        <div class="m-title">Lighting the fuse…</div>
+        <p class="m-sub">Tx submitted. Waiting for slot 312,440,812 to confirm.</p>
+        <div class="m-receipt">
+          <div class="r"><span class="k">Tx hash</span><span class="v">5XnZ…q9kF</span></div>
+          <div class="r"><span class="k">Slot</span><span class="v">312_440_812</span></div>
+          <div class="r"><span class="k">Confirmations</span><span class="v amber">⏳ 0 / 32</span></div>
+        </div>
+        <div class="m-actions single"><button class="btn ghost">Run in background ⌃</button></div>
+      </div>
+    </div>
+
+    <!-- Success -->
+    <div class="state-wrap">
+      <div class="state-label"><b>03. Settled</b><span class="pill success">CONFIRMED</span></div>
+      <div class="modal success">
+        <div class="ic-circle success">✓</div>
+        <div class="steps">
+          <span class="step done">SIGN</span>
+          <span class="step done">BROADCAST</span>
+          <span class="step done">SETTLE</span>
+        </div>
+        <div class="m-title success">Fuse lit. <em>1,214 PEPED.</em></div>
+        <p class="m-sub">Settled in 412ms. Your devSOL just became whitelist forever.</p>
+        <div class="m-receipt">
+          <div class="r"><span class="k">Paid</span><span class="v">0.5000 devSOL</span></div>
+          <div class="r"><span class="k">Activation fee · 1%</span><span class="v amber">−0.0050</span></div>
+          <div class="div"></div>
+          <div class="r"><span class="k">Received</span><span class="v green">+1,214 PEPED</span></div>
+          <div class="r"><span class="k">Whitelisted</span><span class="v green">+0.4950 devSOL</span></div>
+        </div>
+        <div class="m-actions"><button class="btn ghost">View on Solscan</button><button class="btn primary">Trade more →</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ -->
+  <!-- 02 — ACTIVATION -->
+  <!-- ============================ -->
+  <div class="sec-h">
+    <div class="n">02</div>
+    <h2>Activation</h2>
+    <div class="r"></div>
+    <div class="s">Blacklist → Whitelist conversion</div>
+  </div>
+
+  <div class="row">
+    <!-- Confirm activation -->
+    <div class="state-wrap">
+      <div class="state-label"><b>04. Confirm activation</b><span class="pill warn">PREVIEW</span></div>
+      <div class="modal activate">
+        <div class="ic-circle" style="background: var(--blacklist-bg); border: 1px solid var(--fuse-amber); color: var(--fuse-amber);">⚡</div>
+        <div class="m-title activate">Activate <em>4.01 devSOL</em>?</div>
+        <p class="m-sub">One trade, one-time 1% fee. Your devSOL becomes whitelist forever — redeemable any time.</p>
+        <div class="m-receipt">
+          <div class="r"><span class="k">Blacklist amount</span><span class="v">4.0100 devSOL</span></div>
+          <div class="r"><span class="k">Activation fee · 1%</span><span class="v amber">−0.0401</span></div>
+          <div class="div"></div>
+          <div class="r"><span class="k">Becomes whitelist</span><span class="v green">+3.9699 devSOL</span></div>
+          <div class="r"><span class="k">Redeems to</span><span class="v green">≈ 3.176 SOL</span></div>
+        </div>
+        <div class="m-actions"><button class="btn ghost">Cancel</button><button class="btn amber">⚡ Light the fuse</button></div>
+      </div>
+    </div>
+
+    <!-- Activated success -->
+    <div class="state-wrap">
+      <div class="state-label"><b>05. Activated</b><span class="pill success">SETTLED</span></div>
+      <div class="modal success">
+        <div class="ic-circle success">⚡</div>
+        <div class="m-title success">Fuse lit. <em>Activated.</em></div>
+        <p class="m-sub">3.97 devSOL crossed into the whitelist. You can redeem any time, no future fee.</p>
+        <div class="m-receipt">
+          <div class="r"><span class="k">Activated</span><span class="v green">+3.9699 devSOL</span></div>
+          <div class="r"><span class="k">Fee paid</span><span class="v">0.0401 devSOL</span></div>
+          <div class="r"><span class="k">Tx</span><span class="v">5Pk…q1H</span></div>
+          <div class="r"><span class="k">Slot</span><span class="v">312,441,084</span></div>
+        </div>
+        <div class="m-actions"><button class="btn ghost">View receipt</button><button class="btn primary">Redeem now →</button></div>
+      </div>
+    </div>
+
+    <!-- Bucket change toast -->
+    <div class="state-wrap">
+      <div class="state-label"><b>06. Bucket changed</b><span class="pill">TOAST</span></div>
+      <div class="modal" style="aspect-ratio: 1/1.1; justify-content: space-between;">
+        <div>
+          <div style="font-family: var(--font-mono); font-size: 11px; color: var(--concrete); letter-spacing: 0.14em; margin-bottom: 16px; text-transform: uppercase;">PORTFOLIO UPDATE · 4s ago</div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 14px; background: var(--carbon); border: 1px solid var(--ash); border-radius: 12px; margin-bottom: 14px;">
+            <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--blacklist); flex-shrink: 0; box-shadow: 0 0 8px var(--blacklist);"></div>
+            <div style="flex: 1; text-align: left;">
+              <div style="font-family: var(--font-mono); font-size: 11px; color: var(--concrete); letter-spacing: 0.08em;">WAS · BLACKLIST</div>
+              <div style="font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--blacklist);">4.0100 devSOL</div>
+            </div>
+          </div>
+          <div style="text-align: center; color: var(--fuse-amber); font-size: 20px; margin: -6px 0;">↓</div>
+          <div style="display: flex; align-items: center; gap: 12px; padding: 14px; background: linear-gradient(135deg, rgba(20,241,149,0.10), rgba(20,241,149,0.02)); border: 1px solid var(--whitelist-soft); border-radius: 12px;">
+            <div style="width: 12px; height: 12px; border-radius: 50%; background: var(--whitelist); flex-shrink: 0; box-shadow: 0 0 10px var(--whitelist);"></div>
+            <div style="flex: 1; text-align: left;">
+              <div style="font-family: var(--font-mono); font-size: 11px; color: var(--whitelist); letter-spacing: 0.08em;">NOW · WHITELIST</div>
+              <div style="font-family: var(--font-mono); font-size: 16px; font-weight: 700; color: var(--whitelist);">3.9699 devSOL</div>
+            </div>
+          </div>
+        </div>
+        <p class="m-sub" style="text-align: center; margin-top: 4px;"><b style="color: var(--bone);">3.97 devSOL</b> is now redeemable. Your bag is 92% whitelisted.</p>
+        <div class="m-actions single"><button class="btn ghost">Dismiss</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ -->
+  <!-- 03 — REDEMPTION -->
+  <!-- ============================ -->
+  <div class="sec-h">
+    <div class="n">03</div>
+    <h2>Redemption</h2>
+    <div class="r"></div>
+    <div class="s">devSOL → mainnet SOL</div>
+  </div>
+
+  <div class="row">
+    <div class="state-wrap">
+      <div class="state-label"><b>07. Confirm redeem</b><span class="pill warn">PREVIEW</span></div>
+      <div class="modal redeem">
+        <div class="ic-circle success">↗</div>
+        <div class="m-title success">Redeem <em>10.81 devSOL</em>?</div>
+        <p class="m-sub">Convert your whitelisted balance to mainnet SOL. Settles in a single tx.</p>
+        <div class="m-receipt">
+          <div class="r"><span class="k">Whitelist</span><span class="v">10.81 devSOL</span></div>
+          <div class="r"><span class="k">Rate</span><span class="v">1 : 0.80</span></div>
+          <div class="r"><span class="k">Fee · 0.8%</span><span class="v amber">−0.064</span></div>
+          <div class="div"></div>
+          <div class="r"><span class="k">Settles</span><span class="v green">+8.648 SOL</span></div>
+        </div>
+        <div class="m-actions"><button class="btn ghost">Cancel</button><button class="btn primary">✓ Confirm</button></div>
+      </div>
+    </div>
+
+    <div class="state-wrap">
+      <div class="state-label"><b>08. Redeemed</b><span class="pill success">SETTLED MAINNET</span></div>
+      <div class="modal success">
+        <div class="ic-circle success">SOL</div>
+        <div class="m-title success">Cashed out. <em>+8.648 SOL.</em></div>
+        <p class="m-sub">Real SOL just arrived at 7XnZ…q9kF on Solana mainnet.</p>
+        <div class="m-receipt">
+          <div class="r"><span class="k">Burned</span><span class="v">10.81 devSOL</span></div>
+          <div class="r"><span class="k">Received</span><span class="v green">+8.6480 SOL</span></div>
+          <div class="r"><span class="k">Mainnet tx</span><span class="v">5HxP…m4Yt</span></div>
+          <div class="r"><span class="k">Treasury reserve</span><span class="v">1,275.5 SOL</span></div>
+        </div>
+        <div class="m-actions"><button class="btn ghost">Solscan</button><button class="btn primary">Open mainnet wallet</button></div>
+      </div>
+    </div>
+
+    <div class="state-wrap">
+      <div class="state-label"><b>09. Treasury low</b><span class="pill warn">QUEUED</span></div>
+      <div class="modal" style="border-color: var(--fuse-amber);">
+        <div class="ic-circle" style="background: var(--blacklist-bg); border: 1px solid var(--fuse-amber); color: var(--fuse-amber);">⏳</div>
+        <div class="m-title activate">Queued for <em>treasury top-up.</em></div>
+        <p class="m-sub">Treasury is fulfilling 184 SOL of redemptions today. Your 8.65 SOL will settle within ~18 min.</p>
+        <div class="m-receipt">
+          <div class="r"><span class="k">Queue position</span><span class="v amber">#12 of 38</span></div>
+          <div class="r"><span class="k">Est. settle</span><span class="v">~18 min</span></div>
+          <div class="r"><span class="k">Reserve ratio</span><span class="v amber">118%</span></div>
+          <div class="r"><span class="k">Status</span><span class="v amber">⏳ AWAITING SLOT</span></div>
+        </div>
+        <div class="m-actions"><button class="btn ghost">Cancel queue</button><button class="btn amber">Run in background</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ -->
+  <!-- 04 — FAILURES -->
+  <!-- ============================ -->
+  <div class="sec-h">
+    <div class="n">04</div>
+    <h2>Failures &amp; warnings</h2>
+    <div class="r"></div>
+    <div class="s">Rejected · slippage · insufficient</div>
+  </div>
+
+  <div class="row">
+    <div class="state-wrap">
+      <div class="state-label"><b>10. Slippage exceeded</b><span class="pill error">FAILED</span></div>
+      <div class="modal fail">
+        <div class="ic-circle fail">⚠</div>
+        <div class="m-title fail">Slippage <em>blew past</em> your limit.</div>
+        <p class="m-sub">PEPED moved 4.2% during your tx. Set higher tolerance or quote again.</p>
+        <div class="m-receipt">
+          <div class="r"><span class="k">Quoted</span><span class="v">0.000412</span></div>
+          <div class="r"><span class="k">Execution</span><span class="v red">0.000430</span></div>
+          <div class="r"><span class="k">Slippage limit</span><span class="v">0.5%</span></div>
+          <div class="r"><span class="k">Actual</span><span class="v red">4.2%</span></div>
+        </div>
+        <div class="m-actions"><button class="btn ghost">Adjust slippage</button><button class="btn danger">Retry with 5%</button></div>
+      </div>
+    </div>
+
+    <div class="state-wrap">
+      <div class="state-label"><b>11. Wallet rejected</b><span class="pill error">CANCELLED</span></div>
+      <div class="modal fail">
+        <div class="ic-circle fail">✕</div>
+        <div class="m-title fail">Tx rejected <em>in wallet.</em></div>
+        <p class="m-sub">No signature — nothing was broadcast. Your bag and bucket are unchanged.</p>
+        <div class="m-receipt">
+          <div class="r"><span class="k">Wallet</span><span class="v">Phantom · 7XnZ…q9kF</span></div>
+          <div class="r"><span class="k">Reason</span><span class="v red">User rejected</span></div>
+          <div class="r"><span class="k">Cost</span><span class="v">0 SOL</span></div>
+        </div>
+        <div class="m-actions"><button class="btn ghost">Close</button><button class="btn primary">Try again</button></div>
+      </div>
+    </div>
+
+    <div class="state-wrap">
+      <div class="state-label"><b>12. Insufficient SOL</b><span class="pill error">BLOCKED</span></div>
+      <div class="modal fail">
+        <div class="ic-circle fail">!</div>
+        <div class="m-title fail">Not enough SOL <em>for gas.</em></div>
+        <p class="m-sub">Solana network fees need ≥0.001 SOL. Top up your wallet on devnet to continue.</p>
+        <div class="m-receipt">
+          <div class="r"><span class="k">Wallet balance</span><span class="v red">0.0003 SOL</span></div>
+          <div class="r"><span class="k">Need</span><span class="v">0.0010 SOL</span></div>
+          <div class="r"><span class="k">Network fee</span><span class="v">0.000005 SOL</span></div>
+        </div>
+        <div class="m-actions"><button class="btn ghost">Close</button><button class="btn primary">Devnet faucet →</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================ -->
+  <!-- 05 — GRADUATION (HERO MOMENT) -->
+  <!-- ============================ -->
+  <div class="sec-h">
+    <div class="n">05</div>
+    <h2>Graduation — the blast</h2>
+    <div class="r"></div>
+    <div class="s">When curve closes &amp; LP opens</div>
+  </div>
+
+  <div class="grad-row">
+    <div class="grad-hero">
+      <div class="eyebrow">🎓 GRADUATED · LP OPENED</div>
+      <h2><em>$PEPED</em> just<br/>graduated.</h2>
+      <p>85 devSOL on the curve — liquidity has migrated to a full Raydium-style LP. Free trade is open to the world. The fuse worked.</p>
+      <div class="stats-inline">
+        <div>Final curve<b>85.00 devSOL</b></div>
+        <div>LP seeded<b>170k tokens</b></div>
+        <div>Holders<b>1,284</b></div>
+        <div>Time on curve<b>4h 12m</b></div>
+      </div>
+    </div>
+
+    <div class="buy-prompt">
+      <h3>You held until graduation.</h3>
+      <p>Your 12,400 PEPED just became part of the LP. Bonus drop: +124 tokens for diamond hands.</p>
+      <button>Claim bonus →</button>
+    </div>
+
+    <div class="state-wrap">
+      <div class="state-label"><b>Graduation imminent</b><span class="pill warn">2.6 LEFT</span></div>
+      <div class="modal grad">
+        <div class="ic-circle grad">🧨</div>
+        <div class="m-title grad">Curve at <em>96.9%</em>.</div>
+        <p class="m-sub">Next 9 buys could trigger the blast. First-mover advantage on the LP opens to whoever pulls the trigger.</p>
+        <div class="m-receipt">
+          <div class="r"><span class="k">Curve</span><span class="v">82.4 / 85 devSOL</span></div>
+          <div class="r"><span class="k">Remaining</span><span class="v amber">2.6 devSOL · 9 trades</span></div>
+          <div class="r"><span class="k">LP seed</span><span class="v green">170k tokens</span></div>
+        </div>
+        <div class="m-actions single"><button class="btn danger">⚡ Detonate buy →</button></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

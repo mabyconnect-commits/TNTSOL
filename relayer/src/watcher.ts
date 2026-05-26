@@ -4,12 +4,49 @@ import type { LedgerStore } from "./ledger/store";
 import { logger } from "./logger";
 import type { ActivationProcessor } from "./processors/activation";
 import type { RedemptionProcessor } from "./processors/redemption";
+import { solvencyView } from "./solvency";
+import type { Lamports, RedemptionRecord } from "./types";
 import { sleep } from "./util";
 
-// Polls both clusters for new activation/redemption requests and drives them
-// through the processors. Processing is sequential so the solvency counter
-// stays consistent. On startup, recover() re-drives any record left unfinished
-// by a previous crash before new polling begins.
+export interface ReconciliationReport {
+  treasury: Lamports;
+  totalWhitelistedDevnet: Lamports;
+  required: Lamports;
+  solvent: boolean;
+  reserveBuffer: Lamports; // treasury - required; negative means under-reserved
+  pendingActivations: number; // fee collected but not yet whitelisted
+  pendingRedemptions: number; // OBSERVED — deferred/failed, auto-retried each tick
+  haltedRedemptions: number; // HALTED_INSOLVENT — auto-retries once treasury is topped up
+  heldRedemptions: number; // HELD_OVER_CAP — needs operator action (raise a cap / approve)
+}
+
+// Compares the persisted ledger against live on-chain reality (treasury balance)
+// and classifies any unfinished work. The local ledger is a cache, not the
+// source of truth, so this is the place to detect drift before the poll loop
+// starts acting on it.
+export async function reconcile(
+  store: LedgerStore,
+  adapter: OnChainAdapter,
+  cfg: RelayerConfig,
+): Promise<ReconciliationReport> {
+  const treasury = await adapter.getTreasuryBalance();
+  const view = solvencyView(treasury, store.getTotalWhitelisted(), cfg.redemptionRateBps);
+  const reds = store.listRedemptions();
+  return {
+    ...view,
+    reserveBuffer: view.treasury - view.required,
+    pendingActivations: store.listActivations().filter((r) => r.status !== "WHITELISTED").length,
+    pendingRedemptions: reds.filter((r) => r.status === "OBSERVED").length,
+    haltedRedemptions: reds.filter((r) => r.status === "HALTED_INSOLVENT").length,
+    heldRedemptions: reds.filter((r) => r.status === "HELD_OVER_CAP").length,
+  };
+}
+
+// Polls both clusters for new requests and drives them through the processors,
+// then reconciles any record left unfinished by a crash, a deferral, or a
+// solvency halt. Processing is sequential so the solvency counter stays
+// consistent. A per-tick payout budget rate-limits how much real SOL can leave
+// the treasury in a single tick (mirroring the on-chain rate limit).
 export class Watcher {
   private running = false;
 
@@ -21,44 +58,66 @@ export class Watcher {
     private readonly cfg: RelayerConfig,
   ) {}
 
-  async recover(): Promise<void> {
-    for (const rec of this.store.listActivations()) {
-      if (rec.status !== "WHITELISTED") {
-        logger.info("recovering activation", { id: rec.id, status: rec.status });
-        await this.activation.process({ id: rec.id, user: rec.user, devnetAmount: rec.devnetAmount });
-      }
-    }
-    for (const rec of this.store.listRedemptions()) {
-      if (rec.status !== "PAID") {
-        logger.info("recovering redemption", { id: rec.id, status: rec.status });
-        await this.redemption.process({
-          id: rec.id,
-          user: rec.user,
-          whitelistedDevnetAmount: rec.whitelistedDevnetAmount,
-        });
-      }
-    }
-  }
-
   async tick(): Promise<void> {
+    const unlimited = this.cfg.maxTickPayoutLamports === 0n;
+    let budget = this.cfg.maxTickPayoutLamports;
+    const remaining = (): bigint | undefined => (unlimited ? undefined : budget);
+    const charge = (rec: RedemptionRecord): void => {
+      if (!unlimited && rec.status === "PAID") budget -= rec.payoutLamports;
+    };
+    const handledRedemptions = new Set<string>();
+
+    // --- activations: new from the queue, then reconcile unfinished ---
     const acts = await this.adapter.pollActivationRequests(this.store.getCursor("activation"));
     for (const req of acts.requests) {
       const rec = await this.activation.process(req);
       logger.info("activation processed", { id: rec.id, status: rec.status });
     }
     if (acts.cursor !== null) await this.store.setCursor("activation", acts.cursor);
+    for (const rec of this.store.listActivations()) {
+      if (rec.status !== "WHITELISTED") {
+        await this.activation.process({ id: rec.id, user: rec.user, devnetAmount: rec.devnetAmount });
+      }
+    }
 
+    // --- redemptions: new from the queue, then reconcile, sharing one budget ---
     const reds = await this.adapter.pollRedemptionRequests(this.store.getCursor("redemption"));
     for (const req of reds.requests) {
-      const rec = await this.redemption.process(req);
+      const rec = await this.redemption.process(req, remaining());
+      charge(rec);
+      handledRedemptions.add(rec.id);
       logger.info("redemption processed", { id: rec.id, status: rec.status });
     }
     if (reds.cursor !== null) await this.store.setCursor("redemption", reds.cursor);
+    for (const rec of this.store.listRedemptions()) {
+      if (handledRedemptions.has(rec.id)) continue;
+      // Retry only states that can make progress without operator action. A
+      // HELD_OVER_CAP record needs an explicit cap change + re-drive, so skip it.
+      if (rec.status === "OBSERVED" || rec.status === "HALTED_INSOLVENT") {
+        const updated = await this.redemption.process(
+          { id: rec.id, user: rec.user, whitelistedDevnetAmount: rec.whitelistedDevnetAmount },
+          remaining(),
+        );
+        charge(updated);
+      }
+    }
   }
 
   async start(signal: AbortSignal): Promise<void> {
     this.running = true;
-    await this.recover();
+    const report = await reconcile(this.store, this.adapter, this.cfg);
+    logger.info("reconciliation", { ...report });
+    if (!report.solvent) {
+      logger.error("under-reserved at boot — redemptions will halt until treasury is topped up", {
+        treasury: report.treasury,
+        required: report.required,
+      });
+    }
+    if (report.heldRedemptions > 0) {
+      logger.warn("redemptions held over a payout cap — need operator action", {
+        heldRedemptions: report.heldRedemptions,
+      });
+    }
     while (this.running && !signal.aborted) {
       try {
         await this.tick();

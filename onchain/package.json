@@ -1,0 +1,21 @@
+{
+  "name": "tntsol-onchain-tests",
+  "private": true,
+  "scripts": {
+    "test": "bash scripts/anchor-test.sh",
+    "test:fast": "bash scripts/anchor-test.sh --skip-build"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.20",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.10.7",
+    "chai": "^4.5.0",
+    "mocha": "^10.8.2",
+    "ts-mocha": "^10.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
+  }
+}

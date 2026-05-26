@@ -1,0 +1,139 @@
+<!-- COLOR section -->
+<section class="section">
+  <div class="sh">
+    <div class="n">02</div>
+    <h2>Color system</h2>
+    <div class="r"></div>
+    <div class="s">Brand · Semantic · Bucket states</div>
+  </div>
+
+  <!-- Brand swatches -->
+  <div class="palette">
+    <div class="sw" style="background:#FF2D1F; color:#FFF6E8; aspect-ratio:1.4/1.2;">
+      <div>
+        <div class="role">PRIMARY · BRAND</div>
+        <div class="name">Detonator Red</div>
+      </div>
+      <div class="codes">
+        <div class="hex">#FF2D1F</div>
+        <div>oklch 65% 0.25 28</div>
+        <div>RGB 255 · 45 · 31</div>
+        <div>CMYK 0 · 82 · 88 · 0</div>
+      </div>
+    </div>
+    <div class="sw" style="background:#FFB627; color:#0A0908;">
+      <div>
+        <div class="role">SECONDARY</div>
+        <div class="name">Fuse Amber</div>
+      </div>
+      <div class="codes">
+        <div class="hex">#FFB627</div>
+        <div>oklch 82% 0.16 78</div>
+      </div>
+    </div>
+    <div class="sw" style="background:#FFF6E8; color:#0A0908;">
+      <div>
+        <div class="role">ACCENT</div>
+        <div class="name">Spark Cream</div>
+      </div>
+      <div class="codes">
+        <div class="hex">#FFF6E8</div>
+        <div>oklch 97% 0.03 80</div>
+      </div>
+    </div>
+    <div class="sw" style="background:#0A0908; color:#FFF6E8; border:1px solid var(--ash);">
+      <div>
+        <div class="role">BASE</div>
+        <div class="name">Carbon</div>
+      </div>
+      <div class="codes">
+        <div class="hex">#0A0908</div>
+        <div>oklch 12% 0.005 60</div>
+      </div>
+    </div>
+    <div class="sw" style="background:#E8E2D5; color:#0A0908;">
+      <div>
+        <div class="role">TEXT · DARK MODE</div>
+        <div class="name">Bone</div>
+      </div>
+      <div class="codes">
+        <div class="hex">#E8E2D5</div>
+        <div>oklch 89% 0.015 80</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Neutrals ramp -->
+  <div class="neutrals">
+    <div class="nsw" style="background:#0A0908; color:#E8E2D5;"><div class="n">Carbon · 0</div><div class="hx">#0A0908</div></div>
+    <div class="nsw" style="background:#121110; color:#E8E2D5;"><div class="n">Soot · 100</div><div class="hx">#121110</div></div>
+    <div class="nsw" style="background:#1A1817; color:#E8E2D5;"><div class="n">Smoke · 200</div><div class="hx">#1A1817</div></div>
+    <div class="nsw" style="background:#25221F; color:#E8E2D5;"><div class="n">Ash · 300</div><div class="hx">#25221F</div></div>
+    <div class="nsw" style="background:#3A3531; color:#E8E2D5;"><div class="n">Gravel · 400</div><div class="hx">#3A3531</div></div>
+    <div class="nsw" style="background:#5C544D; color:#FFF6E8;"><div class="n">Concrete · 500</div><div class="hx">#5C544D</div></div>
+    <div class="nsw" style="background:#E8E2D5; color:#0A0908;"><div class="n">Bone · 800</div><div class="hx">#E8E2D5</div></div>
+    <div class="nsw" style="background:#F5EFE3; color:#0A0908;"><div class="n">Paper · 900</div><div class="hx">#F5EFE3</div></div>
+  </div>
+
+  <!-- Semantic / status -->
+  <h3 class="sub-h">Semantic &amp; bucket-state colors</h3>
+  <div class="sem-grid">
+    <div class="sem-card">
+      <div class="sem-top">
+        <div class="sem-dot" style="background:#2EE07A;"></div>
+        <h4>Whitelist · Live</h4>
+        <span class="sem-tag">REDEEMABLE</span>
+      </div>
+      <p class="sem-desc">Tokens and SOL marked whitelist are redeemable for real mainnet value. Used on bucket badges, success states, completed transactions.</p>
+      <div class="sem-chips">
+        <span class="chip" style="background:#0E1F16; color:#2EE07A; border-color:#1A8A4B;">●  Whitelisted</span>
+        <span class="chip" style="background:#2EE07A; color:#0E1F16;">REDEEM</span>
+        <span class="chip" style="border-color:#2EE07A; color:#2EE07A;">+12.4%</span>
+      </div>
+    </div>
+    <div class="sem-card">
+      <div class="sem-top">
+        <div class="sem-dot" style="background:#FFB627;"></div>
+        <h4>Blacklist · Locked</h4>
+        <span class="sem-tag">NEEDS ACTIVATION</span>
+      </div>
+      <p class="sem-desc">SOL acquired before activation. Trading is allowed; redemption requires paying the 1% activation fee on first use.</p>
+      <div class="sem-chips">
+        <span class="chip" style="background:#1F1808; color:#FFB627; border-color:#B87F1A;">●  Blacklisted</span>
+        <span class="chip" style="background:#FFB627; color:#1F1808;">ACTIVATE 1%</span>
+        <span class="chip" style="border-color:#FFB627; color:#FFB627;">2.41 devSOL</span>
+      </div>
+    </div>
+    <div class="sem-card">
+      <div class="sem-top">
+        <div class="sem-dot" style="background:#FF2D1F;"></div>
+        <h4>Danger · Detonating</h4>
+        <span class="sem-tag">DESTRUCTIVE</span>
+      </div>
+      <p class="sem-desc">Reserved for irreversible actions: sells, withdraws, slippage warnings, graduation-imminent banners.</p>
+      <div class="sem-chips">
+        <span class="chip" style="background:#FF2D1F; color:#FFF6E8;">SELL ALL</span>
+        <span class="chip" style="border-color:#FF2D1F; color:#FF2D1F;">−18.2%</span>
+        <span class="chip" style="background:#1A0907; color:#FF5436; border-color:#B81A0F;">⚠ High slippage</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Usage ratio -->
+  <div class="usage-card">
+    <div class="usage-bar">
+      <div style="flex:60; background:#0A0908;"></div>
+      <div style="flex:24; background:#25221F;"></div>
+      <div style="flex:10; background:#FF2D1F;"></div>
+      <div style="flex:4; background:#FFB627;"></div>
+      <div style="flex:2; background:#FFF6E8;"></div>
+    </div>
+    <div class="usage-legend">
+      <span><i style="background:#0A0908;"></i>60% Carbon — surfaces, canvas</span>
+      <span><i style="background:#25221F;"></i>24% Ash/Smoke — cards, dividers</span>
+      <span><i style="background:#FF2D1F;"></i>10% Detonator — CTAs, alerts, accents</span>
+      <span><i style="background:#FFB627;"></i>4% Fuse — fuse states, secondary</span>
+      <span><i style="background:#FFF6E8;"></i>2% Spark — highlights, hot moments</span>
+    </div>
+  </div>
+</section>

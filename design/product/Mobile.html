@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=2080" />
+<title>TNTSOL — Mobile</title>
+<link rel="stylesheet" href="tokens.css" />
+<style>
+  body { background: var(--carbon); color: var(--bone); margin: 0; padding: 0; }
+  .page { padding: 56px 48px 96px; max-width: 2080px; margin: 0 auto; }
+
+  .head { margin-bottom: 40px; display: flex; align-items: end; justify-content: space-between; padding-bottom: 24px; border-bottom: 1px solid var(--ash); }
+  .head h1 { font-family: var(--font-display); font-weight: 700; font-size: 32px; letter-spacing: -0.025em; margin: 0; }
+  .head .sub { font-family: var(--font-mono); font-size: 12px; color: var(--concrete); margin-top: 6px; letter-spacing: 0.04em; }
+  .head .right { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); display: flex; gap: 24px; }
+  .head .right b { color: var(--fuse-amber); }
+
+  .devices {
+    display: flex; gap: 32px; flex-wrap: wrap; justify-content: center;
+  }
+  .device-wrap { display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  .device-label { font-family: var(--font-mono); font-size: 12px; color: var(--concrete); letter-spacing: 0.14em; text-transform: uppercase; }
+  .device-label b { color: var(--bone); font-weight: 600; margin-right: 8px; }
+  .device-desc { font-family: var(--font-display); font-size: 13px; color: var(--bone); opacity: 0.8; max-width: 350px; text-align: center; line-height: 1.5; }
+
+  /* Mobile screen tokens */
+  .m-screen { font-family: var(--font-display); color: var(--bone); height: 100%; background: var(--carbon); }
+  .m-status { padding: 14px 20px 6px; display: flex; justify-content: space-between; align-items: center; font-family: var(--font-display); font-weight: 600; font-size: 14px; }
+  .m-status .right { display: flex; gap: 6px; align-items: center; }
+  .m-status svg { width: 14px; height: 14px; }
+
+  .m-topbar { display: flex; align-items: center; justify-content: space-between; padding: 60px 20px 14px; border-bottom: 1px solid var(--ash); }
+  .m-brand { display: flex; align-items: center; gap: 8px; }
+  .m-brand-text { font-family: var(--font-display); font-weight: 700; font-size: 17px; letter-spacing: -0.04em; }
+  .m-brand-text .r { color: var(--tnt-red); }
+  .m-net { font-family: var(--font-mono); font-size: 9px; padding: 2px 6px; border-radius: 999px; background: var(--blacklist-bg); color: var(--blacklist); border: 1px solid var(--blacklist-soft); letter-spacing: 0.1em; }
+  .m-wallet { display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: var(--smoke); border: 1px solid var(--ash); font-family: var(--font-mono); font-size: 11px; }
+  .m-wallet .av { width: 16px; height: 16px; border-radius: 50%; background: linear-gradient(135deg, #9945FF, #14F195); }
+  .m-wallet b { color: var(--whitelist); font-weight: 700; }
+
+  /* Tab bar */
+  .m-tabbar {
+    position: absolute; bottom: 0; left: 0; right: 0; height: 88px;
+    background: var(--soot); border-top: 1px solid var(--ash);
+    display: grid; grid-template-columns: 1fr 1fr 60px 1fr 1fr;
+    padding-bottom: 24px; align-items: start;
+  }
+  .m-tab { display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 10px; font-family: var(--font-mono); font-size: 9px; color: var(--concrete); letter-spacing: 0.04em; }
+  .m-tab.active { color: var(--bone); }
+  .m-tab.active .ic { color: var(--tnt-red); }
+  .m-tab .ic { width: 20px; height: 20px; }
+  .m-fab {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--tnt-red); display: grid; place-items: center;
+    color: var(--carbon); font-size: 28px;
+    box-shadow: 0 14px 30px -8px rgba(255,45,31,0.6);
+    transform: translateY(-12px);
+    justify-self: center;
+  }
+
+  .m-content { padding-bottom: 100px; }
+
+  /* === FLOOR mobile === */
+  .m-filter-row { padding: 12px 20px; display: flex; gap: 6px; overflow-x: auto; }
+  .m-chip { padding: 6px 12px; border-radius: 999px; font-family: var(--font-mono); font-size: 11px; color: var(--concrete); background: var(--smoke); border: 1px solid var(--ash); white-space: nowrap; }
+  .m-chip.active { background: var(--tnt-red); color: var(--carbon); border-color: var(--tnt-red); }
+
+  .m-tk-list { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; }
+  .m-tk {
+    background: var(--soot); border: 1px solid var(--ash); border-radius: 14px;
+    padding: 12px; display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center;
+  }
+  .m-tk.hot { border-color: var(--tnt-red-deep); background: linear-gradient(135deg, rgba(255,45,31,0.08), var(--soot)); }
+  .m-tk .av { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--carbon); }
+  .m-tk .info .nm { font-family: var(--font-display); font-weight: 600; font-size: 15px; letter-spacing: -0.005em; }
+  .m-tk .info .nm .sym { color: var(--concrete); font-weight: 500; margin-left: 4px; font-size: 12px; }
+  .m-tk .info .meta { display: flex; align-items: center; gap: 8px; margin-top: 2px; font-family: var(--font-mono); font-size: 10px; color: var(--concrete); }
+  .m-tk .grad-bar { height: 3px; background: var(--ash); border-radius: 999px; overflow: hidden; margin-top: 6px; width: 100%; }
+  .m-tk .grad-bar .fill { height: 100%; background: linear-gradient(90deg, var(--tnt-red), var(--fuse-amber)); }
+  .m-tk .right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .m-tk .right .price { font-family: var(--font-mono); font-size: 13px; font-weight: 700; }
+  .m-tk .right .pct { font-family: var(--font-mono); font-size: 11px; font-weight: 600; color: var(--whitelist); }
+  .m-tk .right .pct.down { color: var(--tnt-red); }
+
+  .m-section-h { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); letter-spacing: 0.14em; text-transform: uppercase; padding: 16px 20px 8px; display: flex; align-items: center; justify-content: space-between; }
+  .m-section-h .more { color: var(--tnt-red); font-size: 11px; }
+
+  .m-hero {
+    margin: 16px;
+    border-radius: 18px; padding: 18px 20px;
+    background: radial-gradient(circle at 100% 0%, rgba(255,45,31,0.22), transparent 60%), var(--soot);
+    border: 1px solid var(--tnt-red-deep);
+    position: relative; overflow: hidden;
+  }
+  .m-hero .lbl { font-family: var(--font-mono); font-size: 10px; color: var(--tnt-red); letter-spacing: 0.14em; display: flex; align-items: center; gap: 6px; }
+  .m-hero .lbl::before { content: ''; width: 5px; height: 5px; background: var(--tnt-red); border-radius: 50%; box-shadow: 0 0 8px var(--tnt-red); }
+  .m-hero .nm { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: -0.02em; margin: 8px 0 4px; }
+  .m-hero .nm .sym { font-family: var(--font-mono); color: var(--concrete); font-size: 13px; font-weight: 500; margin-left: 4px; }
+  .m-hero .grad-line { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--concrete); margin-top: 8px; }
+  .m-hero .grad-line b { color: var(--bone); }
+  .m-hero .bar { height: 8px; background: var(--carbon); border-radius: 4px; overflow: hidden; margin-top: 6px; }
+  .m-hero .bar .fill { height: 100%; background: linear-gradient(90deg, var(--tnt-red), var(--fuse-amber)); }
+
+  /* === Token detail mobile === */
+  .m-td { padding: 0 0 12px; }
+  .m-td-head { padding: 16px 20px; display: flex; align-items: center; gap: 14px; }
+  .m-td-head .av { width: 56px; height: 56px; border-radius: 14px; display: grid; place-items: center; font-family: var(--font-display); font-weight: 700; font-size: 24px; color: var(--carbon); background: linear-gradient(135deg, #FF2D1F, #FFB627); }
+  .m-td-head .info .nm { font-family: var(--font-display); font-weight: 700; font-size: 20px; letter-spacing: -0.015em; }
+  .m-td-head .info .nm .sym { color: var(--concrete); font-family: var(--font-mono); font-weight: 500; font-size: 13px; margin-left: 4px; }
+  .m-td-head .info .meta { font-family: var(--font-mono); font-size: 11px; color: var(--concrete); margin-top: 4px; }
+
+  .m-stats { padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--ash); border: 1px solid var(--ash); border-radius: 12px; overflow: hidden; margin: 0 16px; }
+  .m-stat { background: var(--soot); padding: 12px 14px; }
+  .m-stat .k { font-family: var(--font-mono); font-size: 9px; color: var(--concrete); letter-spacing: 0.1em; }
+  .m-stat .v { font-family: var(--font-mono); font-size: 17px; font-weight: 700; margin-top: 4px; }
+  .m-stat .v small { font-size: 11px; color: var(--concrete); font-weight: 500; margin-left: 4px; }
+  .m-stat .v.up { color: var(--whitelist); }
+  .m-stat .v.down { color: var(--tnt-red); }
+
+  .m-chart { margin: 16px; height: 140px; background: var(--soot); border: 1px solid var(--ash); border-radius: 12px; overflow: hidden; padding: 12px; }
+  .m-chart svg { width: 100%; height: 100%; }
+
+  .m-grad-card {
+    margin: 0 16px 16px; padding: 14px 16px;
+    background: linear-gradient(135deg, rgba(255,45,31,0.15), rgba(255,182,39,0.05));
+    border: 1px solid var(--tnt-red-deep); border-radius: 14px;
+  }
+  .m-grad-card .lbl { font-family: var(--font-mono); font-size: 10px; color: var(--tnt-red); letter-spacing: 0.14em; }
+  .m-grad-card .pct { font-family: var(--font-display); font-weight: 700; font-size: 22px; margin: 4px 0; letter-spacing: -0.01em; }
+  .m-grad-card .bar { height: 10px; background: var(--carbon); border-radius: 5px; overflow: hidden; }
+  .m-grad-card .bar .fill { height: 100%; background: linear-gradient(90deg, var(--tnt-red), var(--fuse-amber)); }
+  .m-grad-card .desc { font-family: var(--font-mono); font-size: 11px; color: var(--bone); opacity: 0.8; margin-top: 8px; }
+
+  .m-buy-bar {
+    position: absolute; bottom: 88px; left: 0; right: 0;
+    padding: 14px 16px;
+    background: var(--soot); border-top: 1px solid var(--ash);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .m-buy-bar button {
+    padding: 14px; border: 0; border-radius: 12px;
+    font-family: var(--font-display); font-weight: 700; font-size: 15px;
+    cursor: pointer;
+  }
+  .m-buy-bar .buy { background: var(--whitelist); color: var(--carbon); }
+  .m-buy-bar .sell { background: var(--ash); color: var(--bone); }
+
+  /* === Portfolio mobile === */
+  .m-portfolio-hero {
+    margin: 16px; padding: 20px;
+    background: var(--soot); border: 1px solid var(--ash); border-radius: 16px;
+  }
+  .m-portfolio-hero .lbl { font-family: var(--font-mono); font-size: 10px; color: var(--concrete); letter-spacing: 0.14em; }
+  .m-portfolio-hero .v { font-family: var(--font-display); font-weight: 700; font-size: 38px; letter-spacing: -0.025em; line-height: 1; margin-top: 6px; }
+  .m-portfolio-hero .v small { font-family: var(--font-mono); font-size: 13px; color: var(--concrete); font-weight: 500; margin-left: 6px; }
+  .m-portfolio-hero .pnl { font-family: var(--font-mono); font-size: 13px; color: var(--whitelist); font-weight: 700; margin-top: 6px; }
+
+  .m-bucket-bar {
+    display: flex; height: 8px; border-radius: 4px; overflow: hidden;
+    background: var(--ash); margin-top: 16px;
+  }
+  .m-bucket-bar .w { background: var(--whitelist); }
+  .m-bucket-bar .b { background: var(--blacklist); }
+  .m-bucket-legend {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;
+  }
+  .m-bl {
+    padding: 10px 12px; border-radius: 10px;
+    background: var(--carbon); border: 1px solid var(--ash);
+  }
+  .m-bl.wl { border-left: 3px solid var(--whitelist); }
+  .m-bl.bl { border-left: 3px solid var(--blacklist); }
+  .m-bl .k { font-family: var(--font-mono); font-size: 9px; color: var(--concrete); letter-spacing: 0.1em; }
+  .m-bl .v { font-family: var(--font-mono); font-size: 15px; font-weight: 700; margin-top: 4px; }
+  .m-bl .v small { font-size: 11px; color: var(--concrete); font-weight: 500; margin-left: 3px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="head">
+    <div>
+      <h1>TNTSOL · Mobile screens</h1>
+      <div class="sub">iOS app · key flows · designed at 390×844 (iPhone 14 Pro)</div>
+    </div>
+    <div class="right">
+      <span>FRAMES <b>5</b></span>
+      <span>UPDATED <b>2026.05.24</b></span>
+    </div>
+  </header>
+
+  <div class="devices" id="devices"></div>
+</div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="mobile.jsx"></script>
+</body>
+</html>
