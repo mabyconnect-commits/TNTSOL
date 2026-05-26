@@ -114,13 +114,14 @@ pub mod platform {
         Ok(())
     }
 
-    // Program-driven activation: an authorized sibling program (the bonding-curve
-    // AMM) reports a trade of `trade_amount` devSOL via CPI, signing as
-    // `program_authority`. The user's whitelisted devSOL covers the trade fee-free;
-    // only the remainder pulled from the blacklisted bucket is activated (moved to
-    // whitelisted, counted into total_whitelisted) and owes the 1% activation fee.
-    // The fee is paid in mainnet SOL by the relayer (cross-network), so it's
-    // emitted here as `fee_owed_mainnet` rather than charged on-chain.
+    // Program-driven activation, step 1 of 2 (reserve). An authorized sibling
+    // program (the bonding-curve AMM) reports a trade of `trade_amount` devSOL
+    // via CPI, signing as `program_authority`. The user's whitelisted devSOL
+    // covers the trade fee-free; only the blacklisted excess is *reserved* into
+    // the `pending` bucket and owes the 1% activation fee. Crucially this does
+    // NOT touch `whitelisted` or `total_whitelisted` — the funds aren't redeemable
+    // and don't enter the solvency liability until the relayer collects the
+    // mainnet fee and calls `finalize_activation` (fee-first; no leak).
     pub fn program_activate(ctx: Context<ProgramActivate>, trade_amount: u64) -> Result<()> {
         require!(trade_amount > 0, PlatformError::ZeroAmount);
         let fee_bps = ctx.accounts.config.activation_fee_bps as u128;
@@ -133,26 +134,45 @@ pub mod platform {
         let from_blacklist = trade_amount.saturating_sub(wl.whitelisted);
         require!(from_blacklist <= wl.blacklisted, PlatformError::InsufficientFunds);
         wl.blacklisted -= from_blacklist;
-        wl.whitelisted = wl.whitelisted.checked_add(from_blacklist).ok_or(PlatformError::Overflow)?;
-        let user = wl.user;
-
-        let supply = &mut ctx.accounts.supply;
-        supply.total_whitelisted = supply
-            .total_whitelisted
-            .checked_add(from_blacklist)
-            .ok_or(PlatformError::Overflow)?;
-        supply.last_update_slot = Clock::get()?.slot;
-        let total = supply.total_whitelisted;
+        wl.pending = wl.pending.checked_add(from_blacklist).ok_or(PlatformError::Overflow)?;
 
         let fee_owed = ((from_blacklist as u128).checked_mul(fee_bps).ok_or(PlatformError::Overflow)? / 10_000) as u64;
 
-        emit!(Activated {
-            user,
+        emit!(ActivationPending {
+            user: wl.user,
             trade_amount,
             activated: from_blacklist,
             fee_owed_mainnet: fee_owed,
-            total_whitelisted: total,
         });
+        Ok(())
+    }
+
+    // Program-driven activation, step 2 of 2 (finalize). The relayer, after
+    // collecting the mainnet fee for `activation_id`, moves `amount` from the
+    // user's `pending` bucket into `whitelisted` and into the global
+    // `total_whitelisted` liability. Authority-gated (whitelist_authority) and
+    // receipt-idempotent on `activation_id`, so a retry can't double-apply.
+    pub fn finalize_activation(ctx: Context<FinalizeActivation>, activation_id: String, amount: u64) -> Result<()> {
+        require!(amount > 0, PlatformError::ZeroAmount);
+
+        let wl = &mut ctx.accounts.whitelist;
+        require!(wl.pending >= amount, PlatformError::InsufficientPending);
+        wl.pending -= amount;
+        wl.whitelisted = wl.whitelisted.checked_add(amount).ok_or(PlatformError::Overflow)?;
+        let user = wl.user;
+
+        let supply = &mut ctx.accounts.supply;
+        supply.total_whitelisted = supply.total_whitelisted.checked_add(amount).ok_or(PlatformError::Overflow)?;
+        supply.last_update_slot = Clock::get()?.slot;
+        let total = supply.total_whitelisted;
+
+        let receipt = &mut ctx.accounts.grant_receipt;
+        receipt.activation_id = activation_id;
+        receipt.user = user;
+        receipt.amount = amount;
+        receipt.bump = ctx.bumps.grant_receipt;
+
+        emit!(WhitelistGranted { user, amount, total_whitelisted: total });
         Ok(())
     }
 }
@@ -256,6 +276,31 @@ pub struct ProgramActivate<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[derive(Accounts)]
+#[instruction(activation_id: String)]
+pub struct FinalizeActivation<'info> {
+    #[account(seeds = [b"config"], bump = config.bump, has_one = whitelist_authority @ PlatformError::Unauthorized)]
+    pub config: Account<'info, Config>,
+    pub whitelist_authority: Signer<'info>,
+    /// CHECK: only used as a key and as a PDA seed for the whitelist balance.
+    pub user: UncheckedAccount<'info>,
+    #[account(mut, seeds = [b"wl", user.key().as_ref()], bump = whitelist.bump)]
+    pub whitelist: Account<'info, WhitelistBalance>,
+    #[account(mut, seeds = [b"supply"], bump = supply.bump)]
+    pub supply: Account<'info, SupplyState>,
+    #[account(
+        init,
+        payer = payer,
+        space = 8 + GrantReceipt::INIT_SPACE,
+        seeds = [b"grant", activation_id.as_bytes()],
+        bump
+    )]
+    pub grant_receipt: Account<'info, GrantReceipt>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
 #[account]
 #[derive(InitSpace)]
 pub struct Config {
@@ -280,6 +325,7 @@ pub struct WhitelistBalance {
     pub user: Pubkey,
     pub whitelisted: u64,
     pub blacklisted: u64,
+    pub pending: u64, // reserved by a curve trade, awaiting the mainnet fee + finalize
     pub bump: u8,
 }
 
@@ -312,12 +358,11 @@ pub struct WhitelistGranted {
 }
 
 #[event]
-pub struct Activated {
+pub struct ActivationPending {
     pub user: Pubkey,
     pub trade_amount: u64,
     pub activated: u64,
     pub fee_owed_mainnet: u64,
-    pub total_whitelisted: u64,
 }
 
 #[event]
@@ -340,4 +385,6 @@ pub enum PlatformError {
     InsufficientWhitelist,
     #[msg("insufficient funds: trade exceeds whitelisted + blacklisted balance")]
     InsufficientFunds,
+    #[msg("insufficient pending balance to finalize")]
+    InsufficientPending,
 }

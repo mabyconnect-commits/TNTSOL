@@ -3,13 +3,18 @@
 Anchor workspace implementing the design in
 [`../relayer/ONCHAIN_SPEC.md`](../relayer/ONCHAIN_SPEC.md). Three programs:
 
-- **`platform`** (devnet) — per-user whitelisted/blacklisted buckets +
-  `total_whitelisted` aggregate. `deposit` (records faucet/P2P devSOL as
-  blacklisted), `grant_whitelist` (I1, relayer), `burn_for_redemption` (I2), and
-  `program_activate` — a trade reported via CPI (see `curve`) where the user's
-  whitelisted balance covers it fee-free and only the blacklisted excess is
-  activated, emitting the 1% mainnet `fee_owed` for the relayer to collect
-  (the fee is cross-network, so it isn't charged on-chain).
+- **`platform`** (devnet) — per-user whitelisted / blacklisted / **pending**
+  buckets + `total_whitelisted` aggregate. `deposit` (records faucet/P2P devSOL
+  as blacklisted), `grant_whitelist` (I1, relayer), `burn_for_redemption` (I2),
+  and a **fee-first** two-step activation:
+  - `program_activate` (CPI from `curve.buy`) — *reserves* only the blacklisted
+    excess of a trade into `pending` and emits `ActivationPending { fee_owed }`.
+    It does **not** touch whitelisted/`total_whitelisted`, so nothing enters the
+    solvency liability before the fee is paid.
+  - `finalize_activation` (relayer, after collecting the mainnet fee) — moves the
+    amount `pending → whitelisted` and into `total_whitelisted` (receipt-idempotent).
+  This keeps the fee-first invariant across the devnet/mainnet split: an
+  uncollectable fee can never leave a user whitelisted-but-unpaid.
 - **`treasury`** (mainnet) — reserve vault, `collect_activation_fee`, and the
   authoritative D1 (per-payout + windowed rate caps) and D2 (solvency vs. the
   attested supply snapshot) gate in `pay_redemption`; plus `post_supply_snapshot`

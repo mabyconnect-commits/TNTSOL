@@ -3,7 +3,7 @@ import type { Program } from "@coral-xyz/anchor";
 import { PublicKey, Keypair, SystemProgram, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { expect } from "chai";
 import * as fs from "fs";
-import { PLATFORM_ID, configPda, supplyPda, curveAuthority, wlPda, ensurePlatformInit, totalWhitelisted } from "./shared";
+import { PLATFORM_ID, configPda, supplyPda, curveAuthority, wlPda, ensurePlatformInit, totalWhitelisted, whitelistAuthority } from "./shared";
 
 const BN: typeof anchor.BN = (anchor as any).BN ?? (anchor as any).default?.BN;
 const curveIdl = JSON.parse(fs.readFileSync("target/idl/curve.json", "utf8"));
@@ -77,7 +77,9 @@ describe("curve", () => {
     systemProgram: SystemProgram.programId,
   };
 
-  it("buy from the blacklisted bucket activates it via CPI (fee owed)", async () => {
+  const grantPda = (id: string) => PublicKey.findProgramAddressSync([Buffer.from("grant"), Buffer.from(id)], PLATFORM_ID)[0];
+
+  it("buy reserves the blacklisted portion into pending via CPI (not yet whitelisted)", async () => {
     // Fund the buyer's blacklisted bucket (faucet-origin devSOL), then buy.
     await (platform.methods as any)
       .deposit(new BN(LAMPORTS_PER_SOL))
@@ -89,19 +91,43 @@ describe("curve", () => {
 
     expect((await acct.bondingCurve.fetch(curve)).realSol.toNumber()).to.equal(LAMPORTS_PER_SOL);
     expect(Number((await provider.connection.getTokenAccountBalance(myAta)).value.amount)).to.be.greaterThan(0);
-    // The blacklisted SOL was activated: moved to whitelisted, counted in supply.
+    // Reserved into pending; whitelisted + the solvency counter are untouched
+    // until the relayer collects the fee and finalizes (fee-first).
     const b = await (platform.account as any).whitelistBalance.fetch(wlPda(me));
-    expect(b.whitelisted.toNumber()).to.equal(LAMPORTS_PER_SOL);
+    expect(b.pending.toNumber()).to.equal(LAMPORTS_PER_SOL);
+    expect(b.whitelisted.toNumber()).to.equal(0);
     expect(b.blacklisted.toNumber()).to.equal(0);
+    expect((await totalWhitelisted(provider)) - before).to.equal(0);
+  });
+
+  it("relayer finalize moves pending -> whitelisted (after the fee)", async () => {
+    const before = await totalWhitelisted(provider);
+    await (platform.methods as any)
+      .finalizeActivation("curve-act-1", new BN(LAMPORTS_PER_SOL))
+      .accountsPartial({
+        config: configPda,
+        whitelistAuthority: whitelistAuthority.publicKey,
+        user: me,
+        whitelist: wlPda(me),
+        supply: supplyPda,
+        grantReceipt: grantPda("curve-act-1"),
+        payer: provider.wallet.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .signers([whitelistAuthority])
+      .rpc();
+    const b = await (platform.account as any).whitelistBalance.fetch(wlPda(me));
+    expect(b.pending.toNumber()).to.equal(0);
+    expect(b.whitelisted.toNumber()).to.equal(LAMPORTS_PER_SOL);
     expect((await totalWhitelisted(provider)) - before).to.equal(LAMPORTS_PER_SOL);
   });
 
-  it("buy covered by whitelisted balance is fee-free (no new activation)", async () => {
-    const before = await totalWhitelisted(provider);
+  it("buy covered by whitelisted balance is fee-free (no new pending)", async () => {
     await m.buy(new BN(LAMPORTS_PER_SOL / 2), new BN(0)).accountsPartial(buyAccounts).rpc();
-    // Trade is within the whitelisted balance, so nothing new is activated.
-    expect((await totalWhitelisted(provider)) - before).to.equal(0);
-    expect((await (platform.account as any).whitelistBalance.fetch(wlPda(me))).whitelisted.toNumber()).to.equal(LAMPORTS_PER_SOL);
+    // Trade is within the whitelisted balance, so nothing is reserved.
+    const b = await (platform.account as any).whitelistBalance.fetch(wlPda(me));
+    expect(b.pending.toNumber()).to.equal(0);
+    expect(b.whitelisted.toNumber()).to.equal(LAMPORTS_PER_SOL);
   });
 
   it("rejects graduation below the threshold", async () => {

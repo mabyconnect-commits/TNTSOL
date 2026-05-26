@@ -44,18 +44,20 @@ export class SolanaAdapter implements OnChainAdapter {
   }
 
   async whitelistDevnet(_user: string, _amount: Lamports, _idempotencyKey: string): Promise<TxResult> {
-    // TODO: send the devnet platform-program instruction that moves `amount`
-    // from the user's blacklisted bucket to whitelisted.
+    // TODO: call the devnet platform program's `finalize_activation` (signing as
+    // whitelist_authority) to move `amount` from the user's `pending` bucket into
+    // whitelisted + total_whitelisted. Idempotency via the per-activation grant
+    // receipt PDA. (Curve buys only RESERVE into pending; this is the fee-first
+    // finalize, so it runs after collectMainnetFee.)
     throw new Error("SolanaAdapter.whitelistDevnet not implemented");
   }
 
   async pollActivationRequests(_cursor: string | null): Promise<PollResult<ActivationRequest>> {
-    // TODO: page the devnet platform program's `Activated` events (emitted by
-    // curve.buy -> program_activate). Each carries { user, activated,
-    // fee_owed_mainnet }. Emit one ActivationRequest per event with
-    // `preWhitelisted: true` and devnetAmount = activated — the on-chain program
-    // already moved the funds blacklisted->whitelisted, so the relayer only
-    // collects the mainnet fee. Use the devnet tx signature as the idempotent id.
+    // TODO: page the devnet platform program's `ActivationPending` events
+    // (emitted by curve.buy -> program_activate). Each carries { user,
+    // activated, fee_owed_mainnet }. Emit one ActivationRequest per event with
+    // devnetAmount = activated; the standard fee-first processor then collects
+    // the fee and finalizes the whitelist. Use the devnet tx signature as the id.
     throw new Error("SolanaAdapter.pollActivationRequests not implemented");
   }
 
